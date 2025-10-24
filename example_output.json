@@ -1,0 +1,23 @@
+[
+  {
+    "subject": "Mathematics",
+    "question": "What is the value of x in the equation 2x + 5 = 13?\n\nA) x = 2\nB) x = 4\nC) x = 6\nD) x = 8",
+    "solution": "To solve for x, we need to isolate x on one side of the equation.\n\nStep 1: Subtract 5 from both sides\n2x + 5 - 5 = 13 - 5\n2x = 8\n\nStep 2: Divide both sides by 2\n2x / 2 = 8 / 2\nx = 4\n\nTherefore, x = 4",
+    "answer": "B) x = 4",
+    "type": "MCQ"
+  },
+  {
+    "subject": "Mathematics",
+    "question": "The sum of three consecutive integers is 27. The middle integer is _____.",
+    "solution": "Let's call the three consecutive integers n, n+1, and n+2.\n\nStep 1: Set up the equation\nn + (n+1) + (n+2) = 27\n\nStep 2: Simplify\n3n + 3 = 27\n\nStep 3: Subtract 3 from both sides\n3n = 24\n\nStep 4: Divide by 3\nn = 8\n\nThe middle integer is n+1 = 8+1 = 9",
+    "answer": "9",
+    "type": "Fill-in-the-Blank"
+  },
+  {
+    "subject": "Mathematics",
+    "question": "Is the number 17 a prime number?",
+    "solution": "A prime number is a natural number greater than 1 that has no positive divisors other than 1 and itself.\n\nTo check if 17 is prime:\n- We need to check if any number from 2 to √17 (approximately 4.12) divides 17 evenly\n- Check 2: 17 ÷ 2 = 8.5 (not divisible)\n- Check 3: 17 ÷ 3 = 5.67 (not divisible)\n- Check 4: 17 ÷ 4 = 4.25 (not divisible)\n\nSince 17 is not divisible by any number other than 1 and itself, 17 is a prime number.",
+    "answer": "Yes",
+    "type": "Yes/No"
+  }
+]
