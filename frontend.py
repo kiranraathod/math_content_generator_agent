@@ -46,13 +46,13 @@ with col1:
     
     subject = st.text_input(
         "Subject",
-        value="Mathematics",
+        value="Algebra",
         help="Enter the subject for the questions"
     )
     
     subtopic = st.text_input(
         "Subtopic",
-        value="Algebra",
+        value="absolute value",
         help="Enter the specific subtopic"
     )
     
@@ -183,28 +183,3 @@ if st.session_state.generated_questions:
     with st.expander("View Raw JSON"):
         st.json(st.session_state.generated_questions)
 
-st.markdown("---")
-st.markdown("""
-### How it works
-
-This application uses **LangGraph** to create a reliable workflow for generating math questions:
-
-1. **Question Generation**: AI creates a math question based on your parameters
-2. **Question Validation**: Ensures the question is clear and complete
-3. **Answer Validation**: Verifies the answer is correct and properly formatted
-4. **Revision Loop**: If validation fails, the question is revised automatically
-
-The workflow uses a state machine approach to ensure high-quality output.
-
-### Rate Limiting
-
-To stay within Google's free tier limits (10 requests/minute), the app automatically:
-- Adds 6-second delays between API calls
-- Implements exponential backoff on errors
-- Shows progress and estimated time
-
-For faster generation, consider upgrading to a paid tier.
-""")
-
-st.markdown("---")
-st.caption("Powered by LangGraph and Google Gemini")

@@ -91,7 +91,7 @@ The application will open in your default browser at `http://localhost:8501`
 ### Using the Interface
 
 1. **Configure API Key**: Enter your Google API key in the sidebar
-2. **Select Model**: Choose between gemini-pro, gemini-1.5-pro, or gemini-1.5-flash
+2. **Select Model**: Choose between gemini-pro, gemini-2.5-pro, or gemini-2.5-flash
 3. **Set Parameters**:
    - Subject (e.g., Mathematics)
    - Subtopic (e.g., Algebra, Geometry)
@@ -139,3 +139,4 @@ Each question in the output JSON contains:
   "question": "What is 2 + 2?...",
   "solution": "Step-by-step solution...",
   "answer": "4",
+}
