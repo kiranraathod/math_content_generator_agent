@@ -191,9 +191,8 @@ if generate_btn:
                 st.session_state.generated_questions = questions
                 st.success(f"Successfully generated {len(questions)} questions")
                 
-                # UNCOMMENTED: This shows the real API call count
-                st.info(f"Total API calls made: {generator.api_call_count}")
-                # REMOVED: st.info(f"Simulated API calls: ...")
+                # Show the real API call count
+                st.info(f"Total API calls made: {generator.llm_service.get_api_call_count()}")
 
         except Exception as e:
             st.error(f"Error generating questions: {str(e)}")
