@@ -1,0 +1,232 @@
+"""
+Integration module to connect MathQuestionGenerator with Supabase
+Allows saving generated questions directly to the database
+"""
+from typing import List, Dict, Any
+from backend import MathQuestionGenerator
+from supabase_service import SupabaseService
+
+
+class MathQuestionGeneratorWithDB:
+    """
+    Extended Math Question Generator with Supabase integration.
+    Generates questions and automatically saves them to the database.
+    """
+    
+    def __init__(
+        self,
+        google_api_key: str = None,
+        supabase_url: str = None,
+        supabase_key: str = None,
+        model: str = "gemini-2.5-flash"
+    ):
+        """
+        Initialize the generator with database support.
+        
+        Args:
+            google_api_key: Google API key for question generation
+            supabase_url: Supabase project URL
+            supabase_key: Supabase API key
+            model: AI model to use
+        """
+        self.generator = MathQuestionGenerator(api_key=google_api_key, model=model)
+        self.db = SupabaseService(url=supabase_url, key=supabase_key)
+        self.question_counter = self._get_next_question_number()
+    
+    def _get_next_question_number(self) -> int:
+        """
+        Get the next question number based on existing records.
+        
+        Returns:
+            Next available question number
+        """
+        try:
+            all_questions = self.db.fetch_all_rows()
+            if not all_questions:
+                return 1
+            
+            max_number = max(q.get("Question_Number", 0) for q in all_questions)
+            return max_number + 1
+        except Exception:
+            return 1
+    
+    def generate_and_save_question(
+        self,
+        subject: str,
+        subtopic: str,
+        question_type: str
+    ) -> Dict[str, Any]:
+        """
+        Generate a question and save it to Supabase.
+        
+        Args:
+            subject: Subject area
+            subtopic: Specific subtopic
+            question_type: Type of question (MCQ, Fill-in-the-Blank, Yes/No)
+            
+        Returns:
+            Dictionary containing the generated and saved question
+        """
+        # Generate the question
+        question_data = self.generator.generate_question(
+            subject=subject,
+            subtopic=subtopic,
+            question_type=question_type
+        )
+        
+        # Save to database
+        db_record = self.db.add_row(
+            subject=question_data["subject"],
+            subtopic=subtopic,
+            question=question_data["question"],
+            solution=question_data["solution"],
+            final_answer=question_data["answer"],
+            question_number=self.question_counter
+        )
+        
+        self.question_counter += 1
+        return db_record
+    
+    def generate_and_save_batch(
+        self,
+        subject: str,
+        subtopic: str,
+        question_distribution: dict
+    ) -> List[Dict[str, Any]]:
+        """
+        Generate multiple questions and save them to Supabase.
+        
+        Args:
+            subject: Subject area
+            subtopic: Specific subtopic
+            question_distribution: Dict mapping question types to counts
+            
+        Returns:
+            List of saved database records
+        """
+        # Generate all questions
+        questions = self.generator.generate_questions_batch(
+            subject=subject,
+            subtopic=subtopic,
+            question_distribution=question_distribution
+        )
+        
+        # Prepare batch data for database
+        db_rows = []
+        for question_data in questions:
+            db_rows.append({
+                "Subject": question_data["subject"],
+                "Subtopic": subtopic,
+                "Question": question_data["question"],
+                "Solution": question_data["solution"],
+                "Final_answer": question_data["answer"],
+                "Question_Number": self.question_counter
+            })
+            self.question_counter += 1
+        
+        # Save batch to database
+        saved_records = self.db.add_rows_batch(db_rows)
+        return saved_records
+    
+    def get_all_questions(self) -> List[Dict[str, Any]]:
+        """Fetch all questions from the database."""
+        return self.db.fetch_all_rows()
+    
+    def get_questions_by_subject(self, subject: str) -> List[Dict[str, Any]]:
+        """Fetch questions filtered by subject."""
+        return self.db.fetch_rows_by_subject(subject)
+    
+    def get_questions_by_subtopic(self, subtopic: str) -> List[Dict[str, Any]]:
+        """Fetch questions filtered by subtopic."""
+        return self.db.fetch_rows_by_subtopic(subtopic)
+    
+    def update_question(self, question_number: int, updates: Dict[str, Any]) -> Dict[str, Any]:
+        """Update an existing question in the database."""
+        return self.db.update_row(question_number, updates)
+    
+    def delete_question(self, question_number: int) -> bool:
+        """Delete a question from the database."""
+        return self.db.delete_row(question_number)
+    
+    def search_questions(self, search_term: str) -> List[Dict[str, Any]]:
+        """Search for questions containing a specific term."""
+        return self.db.search_questions(search_term)
+    
+    def export_to_json_from_db(
+        self,
+        filters: Dict[str, Any] = None,
+        filename: str = "questions_from_db.json"
+    ) -> str:
+        """
+        Export questions from database to JSON file.
+        
+        Args:
+            filters: Optional filters to apply (e.g., {"Subject": "Mathematics"})
+            filename: Output filename
+            
+        Returns:
+            Path to the exported file
+        """
+        if filters:
+            questions = self.db.fetch_rows_with_filter(filters)
+        else:
+            questions = self.db.fetch_all_rows()
+        
+        # Convert to the export format
+        formatted_questions = []
+        for q in questions:
+            formatted_questions.append({
+                "subject": q.get("Subject"),
+                "question": q.get("Question"),
+                "solution": q.get("Solution"),
+                "answer": q.get("Final_answer"),
+                "question_type": "N/A",  # Not stored in current schema
+                "created_at": q.get("created_at")
+            })
+        
+        return self.generator.export_to_json(formatted_questions, filename)
+
+
+# Example usage
+if __name__ == "__main__":
+    import os
+    
+    # Make sure you have these environment variables set:
+    # - GOOGLE_API_KEY
+    # - SUPABASE_URL
+    # - SUPABASE_KEY
+    
+    try:
+        # Initialize the integrated generator
+        generator_db = MathQuestionGeneratorWithDB()
+        
+        print("\n=== Generating and saving a single question ===")
+        question = generator_db.generate_and_save_question(
+            subject="Mathematics",
+            subtopic="Algebra",
+            question_type="MCQ"
+        )
+        print(f"Saved question: {question.get('Question_Number')}")
+        
+        print("\n=== Generating and saving a batch ===")
+        batch = generator_db.generate_and_save_batch(
+            subject="Mathematics",
+            subtopic="Geometry",
+            question_distribution={"MCQ": 2, "Fill-in-the-Blank": 1}
+        )
+        print(f"Saved {len(batch)} questions")
+        
+        print("\n=== Fetching all questions ===")
+        all_questions = generator_db.get_all_questions()
+        print(f"Total questions in database: {len(all_questions)}")
+        
+        print("\n=== Searching questions ===")
+        results = generator_db.search_questions("solve")
+        print(f"Found {len(results)} questions with 'solve'")
+        
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        print("\nMake sure you have set the following environment variables:")
+        print("  - GOOGLE_API_KEY")
+        print("  - SUPABASE_URL")
+        print("  - SUPABASE_KEY")
