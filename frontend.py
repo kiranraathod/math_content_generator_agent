@@ -1,7 +1,8 @@
 import streamlit as st
 import json
 import os
-# from backend import MathQuestionGenerator 
+# UNCOMMENTED: This now imports your backend
+from backend import MathQuestionGenerator 
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -78,18 +79,15 @@ with st.sidebar:
 st.markdown("""
 <div class="title-container">
     <h1>Math Content Creation Agent</h1>
-    <p>Generate high-quality math questions </p>
+    <p>Generate high-quality math questions</p>
 </div>
 """, unsafe_allow_html=True)
 
 # --- Main Content Columns ---
-# CHANGED: Adjusted column ratio from [2, 1] to [3, 2]
 col1, col2 = st.columns([3, 2])
 
 with col1:
-    # --- IMPROVED LAYOUT: Added border=True ---
     with st.container(border=True):
-        # CHANGED: from st.header to st.subheader for smaller font
         st.subheader("Question Parameters")
         
         subject = st.text_input(
@@ -113,14 +111,12 @@ with col1:
         )
         
         if total_questions > 3:
-            st.warning(f"Generating {total_questions} questions may take {total_questions * 3 * 6 / 60:.1f} minutes due to rate limiting")
+            # MODIFIED: Removed the inaccurate time calculation
+            st.warning(f"Generating {total_questions} questions may take a few minutes due to rate limiting")
 
 with col2:
-    # --- IMPROVED LAYOUT: Added border=True and cleaned up headers ---
     with st.container(border=True):
-        # CHANGED: from st.header to st.subheader for smaller font
         st.subheader("Question Type Distribution")
-        # Used st.caption for instructional text
         st.caption("Specify how many of each type:")
         
         mcq_count = st.number_input(
@@ -150,7 +146,6 @@ with col2:
         calculated_total = mcq_count + fill_blank_count + yes_no_count
         
         if calculated_total != total_questions:
-            # Improved warning message for clarity
             st.warning(
                 f"Distribution total ({calculated_total}) does not match "
                 f"Total Questions ({total_questions})"
@@ -168,9 +163,11 @@ if generate_btn:
         st.error("Question type counts must sum to the Total Number of Questions")
     else:
         try:
-            with st.spinner(f"Generating questions... This will take approximately {calculated_total * 3 * 6 / 60:.1f} minutes due to rate limits"):
-                # Placeholder for backend logic
-                # generator = MathQuestionGenerator(api_key=api_key, model=model, rate_limit_delay=6.0)
+            # MODIFIED: Updated spinner text
+            with st.spinner(f"Generating {calculated_total} questions... (This may take a moment)"):
+                
+                # UNCOMMENTED and FIXED: This now calls the new backend
+                generator = MathQuestionGenerator(api_key=api_key, model=model)
                 
                 question_distribution = {}
                 if mcq_count > 0:
@@ -180,35 +177,23 @@ if generate_btn:
                 if yes_no_count > 0:
                     question_distribution["Yes/No"] = yes_no_count
                 
-                # Mock generation if backend is not present
-                st.info(f"Simulating generation for: {question_distribution}")
-                # questions = generator.generate_questions_batch(
-                #     subject=subject,
-                #     subtopic=subtopic,
-                #     question_distribution=question_distribution
-                # )
+                # REMOVED: st.info(f"Simulating generation for: ...")
                 
-                # Mock data for demonstration
-                questions = []
-                if "MCQ" in question_distribution:
-                     for i in range(question_distribution["MCQ"]):
-                        questions.append({
-                            "subject": subject, "subtopic": subtopic, "type": "MCQ", 
-                            "question": f"Mock MCQ Question {i+1} on {subtopic}",
-                            "solution": "Mock solution...", "answer": "Mock Answer (e.g., A)"
-                        })
-                if "Fill-in-the-Blank" in question_distribution:
-                     for i in range(question_distribution["Fill-in-the-Blank"]):
-                        questions.append({
-                            "subject": subject, "subtopic": subtopic, "type": "Fill-in-the-Blank", 
-                            "question": f"Mock Fill-in-the-Blank Question {i+1} on {subtopic}",
-                            "solution": "Mock solution...", "answer": "Mock Answer"
-                        })
+                # UNCOMMENTED: This is the REAL call to the backend
+                questions = generator.generate_questions_batch(
+                    subject=subject,
+                    subtopic=subtopic,
+                    question_distribution=question_distribution
+                )
+                
+                # REMOVED: All the "Mock data for demonstration" code blocks
                 
                 st.session_state.generated_questions = questions
                 st.success(f"Successfully generated {len(questions)} questions")
-                # st.info(f"Total API calls made: {generator.api_call_count}")
-                st.info(f"Simulated API calls: {len(questions) * 3}")
+                
+                # UNCOMMENTED: This shows the real API call count
+                st.info(f"Total API calls made: {generator.api_call_count}")
+                # REMOVED: st.info(f"Simulated API calls: ...")
 
         except Exception as e:
             st.error(f"Error generating questions: {str(e)}")

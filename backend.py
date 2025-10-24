@@ -6,6 +6,7 @@ from langgraph.graph import StateGraph, END
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
 import operator
+import re
 
 
 class QuestionState(TypedDict):
@@ -22,7 +23,7 @@ class QuestionState(TypedDict):
 
 
 class MathQuestionGenerator:
-    def __init__(self, api_key: str = None, model: str = "gemini-2.5-flash", rate_limit_delay: float = 6.0):
+    def __init__(self, api_key: str = None, model: str = "gemini-2.5-flash"):
         self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
         if not self.api_key:
             raise ValueError("Google API key is required")
@@ -33,47 +34,41 @@ class MathQuestionGenerator:
             google_api_key=self.api_key
         )
         
-        self.rate_limit_delay = rate_limit_delay
-        self.last_api_call = 0
+        # REMOVED: self.rate_limit_delay and self.last_api_call
         self.api_call_count = 0
         
         self.workflow = StateGraph(QuestionState)
         self._build_workflow()
     
-    def _rate_limit(self):
-        current_time = time.time()
-        time_since_last_call = current_time - self.last_api_call
-        
-        if time_since_last_call < self.rate_limit_delay:
-            sleep_time = self.rate_limit_delay - time_since_last_call
-            print(f"Rate limiting: waiting {sleep_time:.1f} seconds...")
-            time.sleep(sleep_time)
-        
-        self.last_api_call = time.time()
-        self.api_call_count += 1
-    
+    # REMOVED: The _rate_limit function
+
     def _invoke_with_retry(self, messages, max_retries=3):
         for attempt in range(max_retries):
             try:
-                self._rate_limit()
+                # REMOVED: self._rate_limit()
+                # ADDED: Increment count here
+                self.api_call_count += 1 
                 response = self.llm.invoke(messages)
                 return response
             except Exception as e:
                 error_msg = str(e)
                 
+                # Reactive retry logic
                 if "429" in error_msg or "ResourceExhausted" in error_msg:
+                    
                     if "retry" in error_msg.lower() and "seconds" in error_msg.lower():
-                        import re
                         match = re.search(r'retry in (\d+)', error_msg)
                         if match:
-                            retry_seconds = int(match.group(1))
+                            retry_seconds = int(match.group(1)) + 1 # Add 1s buffer
                         else:
                             retry_seconds = 2 ** attempt
+                    else:
+                        retry_seconds = 2 ** attempt
                         
-                        if attempt < max_retries - 1:
-                            print(f"Rate limit hit. Waiting {retry_seconds} seconds before retry {attempt + 1}/{max_retries}...")
-                            time.sleep(retry_seconds)
-                            continue
+                    if attempt < max_retries - 1:
+                        print(f"Rate limit hit. Waiting {retry_seconds} seconds before retry {attempt + 1}/{max_retries}...")
+                        time.sleep(retry_seconds)
+                        continue
                 
                 if attempt < max_retries - 1:
                     wait_time = 2 ** attempt
@@ -340,8 +335,8 @@ and subtopic ({state['subtopic']}).
         current = 0
         
         print(f"\nGenerating {total_questions} questions...")
-        print(f"Rate limit: {self.rate_limit_delay}s between API calls")
-        print(f"Estimated time: {total_questions * 3 * self.rate_limit_delay / 60:.1f} minutes")
+        # MODIFIED: Removed inaccurate time/rate limit estimates
+        print("Using reactive rate-limiting (will retry on 429 errors).")
         print("(Each question requires ~3 API calls)\n")
         
         for question_type, count in question_distribution.items():
@@ -374,6 +369,7 @@ and subtopic ({state['subtopic']}).
 
 
 if __name__ == "__main__":
+    # MODIFIED: Constructor no longer takes rate_limit_delay
     generator = MathQuestionGenerator()
     
     test_question = generator.generate_question(
