@@ -1,7 +1,6 @@
 import streamlit as st
 import json
 import os
-# Assuming 'backend.py' exists in the same directory
 # from backend import MathQuestionGenerator 
 
 # --- Page Configuration ---
@@ -75,12 +74,11 @@ with st.sidebar:
 
 # --- Main Page ---
 
-# --- IMPROVED TITLE ---
 # Use the custom HTML/CSS block instead of st.title
 st.markdown("""
 <div class="title-container">
     <h1>Math Content Creation Agent</h1>
-    <p>Generate high-quality math questions with AI-powered validation using Google Gemini</p>
+    <p>Generate high-quality math questions </p>
 </div>
 """, unsafe_allow_html=True)
 
