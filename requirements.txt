@@ -2,4 +2,6 @@ langgraph
 langchain-google-genai 
 langchain-core
 streamlit
+supabase
+python-dotenv
 

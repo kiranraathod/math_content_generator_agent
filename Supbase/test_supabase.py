@@ -114,53 +114,6 @@ def test_supabase_connection():
     return True
 
 
-def test_integrated_generator():
-    """Test the integrated generator (requires Google API key too)."""
-    print("\n" + "=" * 60)
-    print("INTEGRATED GENERATOR TEST (Optional)")
-    print("=" * 60)
-    
-    google_api_key = os.getenv("GOOGLE_API_KEY")
-    
-    if not google_api_key:
-        print("\n⚠️  GOOGLE_API_KEY not set - skipping integrated test")
-        print("To test the full integration, set GOOGLE_API_KEY in your .env file")
-        return
-    
-    print("\n1. Testing integrated question generation + save...")
-    try:
-        from supabase_integration import MathQuestionGeneratorWithDB
-        
-        generator = MathQuestionGeneratorWithDB()
-        print("✓ Successfully initialized integrated generator!")
-        
-        # Generate and save one question
-        print("\n2. Generating and saving a test question...")
-        print("   (This will take ~10-15 seconds...)")
-        
-        question = generator.generate_and_save_question(
-            subject="Mathematics",
-            subtopic="Test Algebra",
-            question_type="MCQ"
-        )
-        
-        print("✓ Successfully generated and saved question!")
-        print(f"  Question Number: {question.get('Question_Number')}")
-        print(f"  Subject: {question.get('Subject')}")
-        
-        # Clean up
-        print("\n3. Cleaning up test question...")
-        question_number = question.get('Question_Number')
-        if question_number:
-            generator.delete_question(question_number)
-            print("✓ Test question deleted")
-        
-        print("\n✅ Integrated generator test passed!")
-        
-    except Exception as e:
-        print(f"❌ Integrated test failed: {str(e)}")
-
-
 def show_usage_examples():
     """Show some usage examples."""
     print("\n" + "=" * 60)
@@ -225,9 +178,6 @@ if __name__ == "__main__":
     success = test_supabase_connection()
     
     if success:
-        # Test integrated generator (if Google API key is available)
-        test_integrated_generator()
-        
         # Show usage examples
         show_usage_examples()
     else:
