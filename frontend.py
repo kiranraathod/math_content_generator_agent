@@ -1,10 +1,8 @@
 import streamlit as st
 import json
-import os
-# UNCOMMENTED: This now imports your backend
 from backend import MathQuestionGenerator
-# Import subjects and subtopics configuration
-from subjects_config import get_subjects, get_subtopics 
+from subjects_config import get_subjects, get_subtopics
+from utils.api_key_manager import load_api_key_from_env, save_api_key_to_env, clear_api_key 
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -46,17 +44,45 @@ if 'generated_questions' not in st.session_state:
     st.session_state.generated_questions = []
 if 'selected_subject' not in st.session_state:
     st.session_state.selected_subject = None
+if 'api_key' not in st.session_state:
+    st.session_state.api_key = load_api_key_from_env()
 
 # --- Sidebar Configuration ---
 with st.sidebar:
     st.header("Configuration")
     
-    api_key = st.text_input(
+    # API Key input with saved value
+    api_key_input = st.text_input(
         "Google API Key",
         type="password",
-        value=os.getenv("GOOGLE_API_KEY", ""),
+        value=st.session_state.api_key,
         help="Enter your Google AI API key"
     )
+    
+    # Update session state when key changes
+    if api_key_input != st.session_state.api_key:
+        st.session_state.api_key = api_key_input
+    
+    api_key = st.session_state.api_key
+    
+    # Save API Key button
+    col_save, col_clear = st.columns(2)
+    with col_save:
+        if st.button("💾 Save Key", help="Save API key to .env file", use_container_width=True):
+            if api_key:
+                try:
+                    save_api_key_to_env(api_key)
+                    st.success("✅ API key saved!")
+                except Exception as e:
+                    st.error(f"❌ Error saving: {e}")
+            else:
+                st.warning("⚠️ Enter a key first")
+    
+    with col_clear:
+        if st.button("🗑️ Clear Key", help="Clear saved API key", use_container_width=True):
+            st.session_state.api_key = ""
+            clear_api_key()
+            st.rerun()
     
     model = st.selectbox(
         "Model",
