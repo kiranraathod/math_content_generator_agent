@@ -49,7 +49,8 @@ class MathQuestionGenerator:
         self,
         subject: str,
         subtopic: str,
-        question_type: str
+        question_type: str,
+        level: int = 1
     ) -> dict:
         """
         Generate a single math question.
@@ -58,6 +59,7 @@ class MathQuestionGenerator:
             subject: Subject area (e.g., "Mathematics")
             subtopic: Specific subtopic (e.g., "Algebra")
             question_type: Type of question ("MCQ", "Fill-in-the-Blank", "Yes/No")
+            level: Difficulty level (1-6, default: 1)
             
         Returns:
             Dictionary containing the generated question, solution, and answer
@@ -66,6 +68,7 @@ class MathQuestionGenerator:
             subject=subject,
             subtopic=subtopic,
             question_type=question_type,
+            level=level,
             question="",
             solution="",
             answer="",
@@ -82,14 +85,16 @@ class MathQuestionGenerator:
             question=result["question"],
             solution=result["solution"],
             answer=result["answer"],
-            question_type=result["question_type"]
+            question_type=result["question_type"],
+            level=result["level"]
         )
     
     def generate_questions_batch(
         self,
         subject: str,
         subtopic: str,
-        question_distribution: dict
+        question_distribution: dict,
+        level: int = 1
     ) -> List[dict]:
         """
         Generate multiple questions based on distribution.
@@ -99,6 +104,7 @@ class MathQuestionGenerator:
             subtopic: Specific subtopic
             question_distribution: Dict mapping question types to counts
                                  e.g., {"MCQ": 5, "Fill-in-the-Blank": 3}
+            level: Difficulty level (1-6, default: 1)
             
         Returns:
             List of generated question dictionaries
@@ -107,7 +113,7 @@ class MathQuestionGenerator:
         total_questions = sum(question_distribution.values())
         current = 0
         
-        print(f"\nGenerating {total_questions} questions...")
+        print(f"\nGenerating {total_questions} questions at Level {level}...")
         print("Using reactive rate-limiting (will retry on 429 errors).")
         print("(Each question requires ~3 API calls)\n")
         
@@ -115,11 +121,12 @@ class MathQuestionGenerator:
             for i in range(count):
                 current += 1
                 try:
-                    print(f"Generating question {current}/{total_questions} ({question_type})...")
+                    print(f"Generating question {current}/{total_questions} ({question_type}, Level {level})...")
                     question = self.generate_question(
                         subject=subject,
                         subtopic=subtopic,
-                        question_type=question_type
+                        question_type=question_type,
+                        level=level
                     )
                     questions.append(question)
                     print(f"✓ Successfully generated question {current}")

@@ -14,6 +14,7 @@ class QuestionState(TypedDict):
         subject: Main subject area (e.g., "Mathematics")
         subtopic: Specific subtopic (e.g., "Algebra", "Geometry")
         question_type: Type of question ("MCQ", "Fill-in-the-Blank", "Yes/No")
+        level: Difficulty level (1-6, where 1 is Foundation and 6 is Master Challenge)
         question: The generated question text
         solution: Step-by-step solution
         answer: Final answer to the question
@@ -25,6 +26,7 @@ class QuestionState(TypedDict):
     subject: str
     subtopic: str
     question_type: str
+    level: int
     question: str
     solution: str
     answer: str

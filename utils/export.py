@@ -40,7 +40,8 @@ class ExportService:
         question: str,
         solution: str,
         answer: str,
-        question_type: str
+        question_type: str,
+        level: int = 1
     ) -> Dict:
         """
         Format a question into a standardized dictionary for export.
@@ -51,6 +52,7 @@ class ExportService:
             solution: Solution steps
             answer: Final answer
             question_type: Type of question
+            level: Difficulty level (1-6)
             
         Returns:
             Formatted question dictionary
@@ -60,5 +62,6 @@ class ExportService:
             "question": question,
             "solution": solution,
             "answer": answer,
-            "type": question_type
+            "type": question_type,
+            "level": level
         }

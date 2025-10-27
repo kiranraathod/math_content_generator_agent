@@ -6,6 +6,7 @@ from typing import Dict
 from langchain_core.messages import HumanMessage, SystemMessage
 from models import QuestionState
 from services.llm_service import LLMService
+from utils.LEVEL_DEFINITIONS import LEVELS
 
 
 class QuestionService:
@@ -94,11 +95,19 @@ and subtopic ({state['subtopic']}).
             Formatted prompt string
         """
         question_type = state['question_type']
+        level = state.get('level', 1)
         type_specific_prompt = self.QUESTION_TYPE_PROMPTS.get(question_type, '')
+        
+        # Get level definition
+        level_key = f"level_{level}"
+        level_definition = LEVELS.get(level_key, LEVELS["level_1"])
         
         return f"""Generate a {question_type} math question.
 Subject: {state['subject']}
 Subtopic: {state['subtopic']}
+
+DIFFICULTY LEVEL {level}:
+{level_definition}
 
 {type_specific_prompt}
 

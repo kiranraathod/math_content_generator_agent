@@ -102,6 +102,28 @@ with col1:
             help="Enter the specific subtopic"
         )
         
+        # Add level selection
+        level = st.selectbox(
+            "Difficulty Level",
+            options=[1, 2, 3, 4, 5, 6],
+            format_func=lambda x: f"Level {x} - {['Foundation', 'Basic Application', 'Intermediate', 'Advanced', 'Expert', 'Master Challenge'][x-1]}",
+            index=0,
+            help="Select the difficulty level for questions"
+        )
+        
+        # Show level description in an expander
+        level_descriptions = {
+            1: "Most straightforward application with simplest numbers (1-2 steps)",
+            2: "Standard variations with manageable calculations (2-3 steps)",
+            3: "Multiple steps with decision-making (3-4 steps)",
+            4: "Complex non-routine problems (4-5 steps)",
+            5: "Synthesis across topics (5-6 steps)",
+            6: "Olympiad-level exceptional challenges (6+ steps)"
+        }
+        
+        with st.expander("ℹ️ Level Description"):
+            st.info(level_descriptions[level])
+        
         total_questions = st.number_input(
             "Total Number of Questions",
             min_value=1,
@@ -183,7 +205,8 @@ if generate_btn:
                 questions = generator.generate_questions_batch(
                     subject=subject,
                     subtopic=subtopic,
-                    question_distribution=question_distribution
+                    question_distribution=question_distribution,
+                    level=level
                 )
                 
                 # REMOVED: All the "Mock data for demonstration" code blocks
@@ -205,8 +228,18 @@ if st.session_state.generated_questions:
     
     for idx, question in enumerate(st.session_state.generated_questions, 1):
         with st.expander(f"Question {idx} - {question.get('type', 'Unknown')}", expanded=True):
-            st.markdown(f"**Subject:** {question.get('subject', 'N/A')}")
-            st.markdown(f"**Type:** {question.get('type', 'N/A')}")
+            col_q1, col_q2 = st.columns(2)
+            with col_q1:
+                st.markdown(f"**Subject:** {question.get('subject', 'N/A')}")
+                st.markdown(f"**Type:** {question.get('type', 'N/A')}")
+            with col_q2:
+                pass  # Removed Level from column
+            
+            # Moved Level to its own line
+            level_num = question.get('level', 1)
+            level_names = ['Foundation', 'Basic Application', 'Intermediate', 'Advanced', 'Expert', 'Master Challenge']
+            level_name = level_names[level_num - 1] if 1 <= level_num <= 6 else 'Unknown'
+            st.markdown(f"**Level:** {level_num} - {level_name}")
             
             st.markdown("**Question:**")
             st.write(question.get('question', 'N/A'))
