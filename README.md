@@ -10,7 +10,7 @@ A sophisticated math question generator powered by LangGraph and Google Gemini t
 - Clean and intuitive Streamlit interface
 - JSON export functionality
 - Revision loop for quality assurance
-- Powered by Google Gemini AI
+
 
 ## Architecture
 
@@ -30,7 +30,7 @@ Generate Question → Validate Question → Validate Answer → Output
 2. **Validate Question**: Ensures clarity and completeness
 3. **Validate Answer**: Verifies correctness and format
 4. **Revise Question**: Improves quality based on validation feedback
-
+            
 #### State Management:
 
 The state maintains:
@@ -58,15 +58,16 @@ git clone <repository-url>
 cd content_generator
 ```
 
-2. Create a virtual environment:
+2. Create a virtual environment using uv:
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
 3. Install dependencies:
 ```bash
-pip install -r requirements.txt
+uv sync
+
 ```
 
 4. Set up environment variables:
