@@ -2,7 +2,9 @@ import streamlit as st
 import json
 import os
 # UNCOMMENTED: This now imports your backend
-from backend import MathQuestionGenerator 
+from backend import MathQuestionGenerator
+# Import subjects and subtopics configuration
+from subjects_config import get_subjects, get_subtopics 
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -42,6 +44,8 @@ st.markdown("""
 # --- Session State Initialization ---
 if 'generated_questions' not in st.session_state:
     st.session_state.generated_questions = []
+if 'selected_subject' not in st.session_state:
+    st.session_state.selected_subject = None
 
 # --- Sidebar Configuration ---
 with st.sidebar:
@@ -90,17 +94,35 @@ with col1:
     with st.container(border=True):
         st.subheader("Question Parameters")
         
-        subject = st.text_input(
+        # Get available subjects
+        available_subjects = get_subjects()
+        
+        # Subject dropdown
+        subject = st.selectbox(
             "Subject",
-            value="Algebra",
-            help="Enter the subject for the questions"
+            options=available_subjects,
+            index=0 if available_subjects else None,
+            help="Select the subject for the questions"
         )
         
-        subtopic = st.text_input(
+        # Update session state to track subject changes
+        if st.session_state.selected_subject != subject:
+            st.session_state.selected_subject = subject
+        
+        # Get subtopics for the selected subject
+        available_subtopics = get_subtopics(subject) if subject else []
+        
+        # Subtopic dropdown (dynamically updates based on subject)
+        subtopic = st.selectbox(
             "Subtopic",
-            value="absolute value",
-            help="Enter the specific subtopic"
+            options=available_subtopics,
+            index=0 if available_subtopics else None,
+            help="Select the specific subtopic (based on chosen subject)",
+            disabled=not available_subtopics
         )
+        
+        if not available_subtopics:
+            st.info("Please select a subject to see available subtopics")
         
         # Add level selection
         level = st.selectbox(
