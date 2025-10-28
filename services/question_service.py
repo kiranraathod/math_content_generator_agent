@@ -17,8 +17,8 @@ class QuestionService:
     
     QUESTION_TYPE_PROMPTS = {
         "MCQ": "Create a multiple choice question with 4 options (A, B, C, D). Mark the correct answer clearly.",
-        "Fill-in-the-Blank": "Create a fill-in-the-blank question with clear blanks marked with underscores.",
-        "Yes/No": "Create a yes or no question that can be clearly answered with either Yes or No."
+        "Fill-in-the-Blank": "Create a fill-in-the-blank question with clear blanks marked with underscores. Example : Fill in the Blank Solve |x - 5| = 8 → x = ____ or ____.",
+        "Yes/No": "Create a yes or no question that can be clearly answered with either Yes or No. Example : A student says: “|-7| = -7 because of the negative sign.” Correct or Wrong?"
     }
     
     def __init__(self, llm_service: LLMService):
@@ -42,11 +42,11 @@ class QuestionService:
         """
         prompt = self._create_generation_prompt(state)
         messages = [
-            SystemMessage(content="You are an expert math teacher creating educational content for students."),
+            SystemMessage(content="You are an expert math teacher creating educational content for 14-18 students."),
             HumanMessage(content=prompt)
         ]
 
-        """print("Generating question with prompt:\    n", prompt)"""
+        print("Generating question with prompt:\    n", prompt)
 
         response_content = self.llm_service.invoke_with_retry(messages)
         return self._parse_question_response(response_content)

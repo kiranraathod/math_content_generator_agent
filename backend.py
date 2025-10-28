@@ -82,6 +82,7 @@ class MathQuestionGenerator:
         
         return self.export_service.format_question_for_export(
             subject=result["subject"],
+            subtopic=result["subtopic"],
             question=result["question"],
             solution=result["solution"],
             answer=result["answer"],

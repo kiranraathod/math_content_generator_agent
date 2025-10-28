@@ -1,8 +1,13 @@
 import streamlit as st
 import json
+from dotenv import load_dotenv
 from backend import MathQuestionGenerator
 from subjects_config import get_subjects, get_subtopics
-from utils.api_key_manager import load_api_key_from_env, save_api_key_to_env, clear_api_key 
+from utils.api_key_manager import load_api_key_from_env, save_api_key_to_env, clear_api_key
+from Supabase.supabase_service import SupabaseService
+
+# Load environment variables from .env file
+load_dotenv() 
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -279,6 +284,7 @@ if st.session_state.generated_questions:
             col_q1, col_q2 = st.columns(2)
             with col_q1:
                 st.markdown(f"**Subject:** {question.get('subject', 'N/A')}")
+                st.markdown(f"**Subtopic:** {question.get('subtopic', 'N/A')}")
                 st.markdown(f"**Type:** {question.get('type', 'N/A')}")
             with col_q2:
                 pass  # Removed Level from column
@@ -300,12 +306,12 @@ if st.session_state.generated_questions:
     
     st.markdown("---")
     
-    col1_btn, col2_btn, col3_btn = st.columns([1, 1, 2])
+    col1_btn, col2_btn, col3_btn = st.columns([1, 1, 1])
     
     with col1_btn:
         json_output = json.dumps(st.session_state.generated_questions, indent=2)
         st.download_button(
-            label="Download JSON",
+            label="📥 Download JSON",
             data=json_output,
             file_name="math_questions.json",
             mime="application/json",
@@ -313,9 +319,40 @@ if st.session_state.generated_questions:
         )
     
     with col2_btn:
-        if st.button("Clear All", use_container_width=True):
+        if st.button("🗑️ Clear All", use_container_width=True):
             st.session_state.generated_questions = []
             st.rerun()
+    
+    with col3_btn:
+        if st.button("☁️ Upload to Database", use_container_width=True, type="primary"):
+            try:
+                # Initialize Supabase service
+                supabase_service = SupabaseService()
+                
+                # Prepare data for batch upload
+                rows_to_upload = []
+                for question in st.session_state.generated_questions:
+                    row = {
+                        "Subject": question.get('subject', 'Unknown'),
+                        "Subtopic": question.get('subtopic', 'Unknown'),
+                        "Question": question.get('question', ''),
+                        "Solution": question.get('solution', ''),
+                        "Final_answer": question.get('answer', ''),
+                        "question_type": question.get('type', 'MCQ')
+                    }
+                    rows_to_upload.append(row)
+                
+                # Upload to database
+                with st.spinner("Uploading to database..."):
+                    result = supabase_service.add_rows_batch(rows_to_upload)
+                    st.success(f"✅ Successfully uploaded {len(result)} questions to database!")
+                    
+            except ValueError as ve:
+                st.error(f"❌ Configuration Error: {str(ve)}")
+                st.info("💡 Make sure SUPABASE_URL and SUPABASE_KEY are set in your .env file")
+            except Exception as e:
+                st.error(f"❌ Error uploading to database: {str(e)}")
+                st.info("💡 Check your Supabase connection and credentials")
     
     with st.expander("View Raw JSON"):
         st.json(st.session_state.generated_questions)

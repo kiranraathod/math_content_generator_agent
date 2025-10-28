@@ -37,6 +37,7 @@ class ExportService:
     @staticmethod
     def format_question_for_export(
         subject: str,
+        subtopic: str,
         question: str,
         solution: str,
         answer: str,
@@ -59,6 +60,7 @@ class ExportService:
         """
         return {
             "subject": subject,
+            "subtopic": subtopic,
             "question": question,
             "solution": solution,
             "answer": answer,
