@@ -1,75 +1,65 @@
+""""
+Math Game Level Definitions for AI Exercise Generation  
+Target Audience: High School Students (Ages 14–18)
+
+Purpose:  
+Each level defines a distinct difficulty tier for generating math exercises.  
+The AI should create problems that match the structure, reasoning depth, and step complexity described below."""
+
+LEVEL_1 = """FOUNDATION Level — Confirm essential conceptual understanding.
+
+- Core goal: verify recognition and direct application of ONE basic concept
+- Structure: single-step or two-step direct computation
+- Numbers: small integers, simple fractions, or whole values
+- Context: straightforward question, no variations or tricks
+- Expected feeling: “easy once I know the rule”
+- Example pattern: recall formula, substitute, compute
 """
-Math Game Level Definitions for AI Generation
-Ages 14-18 (Middle School & High School)
+
+LEVEL_2 = """BASIC APPLICATION Level — Apply concepts in typical school scenarios.
+
+- Core goal: apply one concept in a slightly varied or real-world context
+- Structure: 2–3 logical steps with clear direction
+- Numbers: manageable but not trivial (can include decimals, fractions)
+- Variation: introduce mild contextual or numerical changes
+- Expected feeling: standard textbook-style exercise
+- Example pattern: identify concept, apply method, simplify
 """
 
-LEVEL_1 = """FOUNDATION level - Verify basic understanding of the core concept.
+LEVEL_3 = """INTERMEDIATE Level — Combine related ideas and plan a solution.
 
-- Most straightforward application
-- Simplest possible numbers
-- Minimal calculations (1-2 direct steps)
-- No complications or variations
-- Focus on ONE core idea
-- Solution should feel obvious once concept is understood"""
+- Core goal: connect multiple related ideas from the same topic
+- Structure: 3–4 reasoning steps requiring correct sequence of operations
+- Presentation: less direct; may require identifying which formula or method to use
+- Variation: present data or context in less obvious ways
+- Expected feeling: “needs careful thought and planning”
+- Example pattern: interpret setup, select formula, compute, check
+"""
 
+LEVEL_4 = """ADVANCED Level — Solve complex, multi-step problems.
 
-LEVEL_2 = """BASIC APPLICATION level - Test application in standard situations.
+- Core goal: integrate concepts across subtopics (e.g., algebra + geometry)
+- Structure: 4–5 reasoning steps with possible branching paths
+- Variation: include edge cases or data that require decision-making
+- Numbers: more complex or involve multiple representations
+- Expected feeling: “challenging but solvable with persistence”
+- Example pattern: analyze, choose method, execute, validate
+"""
 
-- Standard variations of core concept
-- Manageable calculations (2-3 clear steps)
-- Reasonable numbers requiring some calculation
-- Small variations from basic form
-- Recognizable patterns and methods
-- Stay within familiar territory"""
+LEVEL_5 = """CHALLENGE Level — Deep multi-concept reasoning within high school scope.
 
+- Core goal: synthesize knowledge from multiple math areas
+- Structure: 5–6 reasoning steps requiring adaptability and insight
+- Integration: mix algebra, functions, geometry, probability, or other topics
+- Variation: may require forming equations or exploring constraints
+- Expected feeling: “advanced high school problem — tricky but rewarding”
+- Example pattern: translate word problem, connect ideas, reason through conditions
+"""
 
-LEVEL_3 = """INTERMEDIATE level - Require multiple steps and decision-making.
-
-- Combine several related ideas (3-4 distinct steps)
-- Moderate complexity in problem structure
-- Student must plan sequence of operations
-- May present information in less direct ways
-- Include decision points about which method to use
-- Integrate multiple ideas from same subtopic"""
-
-
-LEVEL_4 = """ADVANCED level - Challenge with complex problems requiring deep thinking.
-
-- Non-routine problems requiring genuine problem-solving (4-5 steps)
-- Integrate multiple concepts in non-obvious ways
-- Must devise strategy before beginning
-- Combine concepts from multiple related subtopics
-- Include edge cases or special situations
-- Multiple valid approaches may exist"""
-
-
-LEVEL_5 = """EXPERT level - Significant challenges requiring sophisticated thinking.
-
-- Synthesis of ideas across topics (5-6 carefully planned steps)
-- Non-standard situations requiring adaptation
-- Deep insight into mathematical relationships
-- Integrate concepts from different topics
-- May involve multiple solution paths
-- Require validation and constraint checking"""
-
-
-LEVEL_6 = """MASTER CHALLENGE level - Extreme challenges for olympiad preparation.
-
-- Exceptional mathematical thinking (6+ sophisticated steps)
-- Creative problem-solving beyond standard curricula
-- Discover approach through mathematical insight
-- Integrate concepts across disparate domains
-- Often include parameters or conditional solutions
-- May require proof elements or formal reasoning
-- Elegant solutions requiring key insights"""
-
-
-# Dictionary for easy iteration if needed
 LEVELS = {
     "level_1": LEVEL_1,
     "level_2": LEVEL_2,
     "level_3": LEVEL_3,
     "level_4": LEVEL_4,
-    "level_5": LEVEL_5,
-    "level_6": LEVEL_6
+    "level_5": LEVEL_5
 }
