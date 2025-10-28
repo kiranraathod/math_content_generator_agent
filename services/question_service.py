@@ -45,7 +45,9 @@ class QuestionService:
             SystemMessage(content="You are an expert math teacher creating educational content for students."),
             HumanMessage(content=prompt)
         ]
-        
+
+        """print("Generating question with prompt:\    n", prompt)"""
+
         response_content = self.llm_service.invoke_with_retry(messages)
         return self._parse_question_response(response_content)
     
