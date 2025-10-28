@@ -2,14 +2,6 @@
 name = "math-content-generator-agent"
 version = "0.1.0"
 description = "Add your description here"
-<<<<<<< HEAD
-requires-python = ">=3.13"
-dependencies = [
-    "langchain-core>=1.0.0",
-    "langchain-google-genai>=3.0.0",
-    "langgraph>=1.0.1",
-    "streamlit>=1.50.0",
-=======
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -18,5 +10,4 @@ dependencies = [
     "langgraph>=1.0.1",
     "streamlit>=1.50.0",
     "supabase>=2.22.2",
->>>>>>> ee43729e7515d86eec53c2e7d98f812718ce643f
 ]
