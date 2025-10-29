@@ -1,7 +1,8 @@
 from firecrawl import Firecrawl
 import json
+import os
 
-firecrawl = Firecrawl(api_key="fc-4df4cab8c5c64cd892f2707cc53ffdf8")
+firecrawl = Firecrawl(api_key=os.getenv("FIRECRAWL_API_KEY"))
 
 # Crawl the website with specific configuration
 response = firecrawl.crawl(

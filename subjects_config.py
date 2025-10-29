@@ -6,21 +6,6 @@ Add your subjects and subtopics here.
 # Dictionary mapping subjects to their subtopics
 SUBJECTS_AND_SUBTOPICS = {
     "Algebra 1": [
-        # A. Numbers and operations
-        "Numbers and operations - A.1 Add, subtract, multiply, and divide integers",
-        "Numbers and operations - A.2 Evaluate numerical expressions involving integers",
-        "Numbers and operations - A.3 Convert between decimals and fractions",
-        "Numbers and operations - A.4 Add and subtract rational numbers",
-        "Numbers and operations - A.5 Multiply and divide rational numbers",
-        "Numbers and operations - A.6 Simplify complex fractions",
-        "Numbers and operations - A.7 Evaluate numerical expressions involving rational numbers",
-        "Numbers and operations - A.8 Square roots",
-        "Numbers and operations - A.9 Cube roots",
-        "Numbers and operations - A.10 Sort rational and irrational numbers",
-        "Numbers and operations - A.11 Classify rational and irrational numbers",
-        "Numbers and operations - A.12 Properties of operations on rational and irrational numbers",
-        "Numbers and operations - A.13 Classify numbers",
-        # B. Expressions
         "Expressions - B.1 Write variable expressions",
         "Expressions - B.2 Evaluate variable expressions involving integers",
         "Expressions - B.3 Evaluate variable expressions involving rational numbers",

@@ -1,3 +1,8 @@
+"""
+IXL Screenshot Analyzer Module
+Provides functionality to analyze IXL screenshots using AI vision capabilities.
+Can be used as a standalone script or imported as a module.
+"""
 from langchain_core.messages import HumanMessage
 import os
 import json
@@ -96,12 +101,22 @@ def analyze_from_firecrawl_result(result_data: dict, question: str = None):
 
 
 if __name__ == "__main__":
-    # Example: Load from the saved JSON file
+    """
+    Run as standalone script for testing purposes.
+    For production use, import this module and use analyze_ixl_screenshot() or analyze_from_firecrawl_result().
+    
+    Usage: python analyze_screenshot.py [path_to_json_file]
+    """
+    import sys
+    
+    # Allow optional JSON file path as command line argument
+    json_file = sys.argv[1] if len(sys.argv) > 1 else "ixl_algebra1_crawl_result.json"
+    
     try:
-        with open("ixl_algebra1_crawl_result.json", "r", encoding="utf-8") as f:
+        with open(json_file, "r", encoding="utf-8") as f:
             result_data = json.load(f)
         
-        print("Loaded Firecrawl result from JSON file")
+        print(f"✅ Loaded Firecrawl result from {json_file}")
         
         # Analyze the screenshot
         analysis = analyze_from_firecrawl_result(result_data)
@@ -113,7 +128,8 @@ if __name__ == "__main__":
         print("="*80)
         
     except FileNotFoundError:
-        print("Error: ixl_algebra1_crawl_result.json not found")
+        print(f"❌ Error: {json_file} not found")
         print("Please run the Firecrawl script first to generate the screenshot")
+        print(f"\nUsage: python {os.path.basename(__file__)} [path_to_json_file]")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"❌ Error: {e}")
