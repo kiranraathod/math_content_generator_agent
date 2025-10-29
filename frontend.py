@@ -177,6 +177,16 @@ with col1:
         with st.expander("ℹ️ Level Description"):
             st.info(level_descriptions[level])
         
+        # Add checkbox for using examples
+        use_examples = st.checkbox(
+            "📚 Use Database Examples",
+            value=False,
+            help="Fetch example questions from the database for this subtopic to inspire the AI"
+        )
+        
+        if use_examples:
+            st.caption("✓ AI will use existing questions as style reference")
+        
         total_questions = st.number_input(
             "Total Number of Questions",
             min_value=1,
@@ -259,7 +269,8 @@ if generate_btn:
                     subject=subject,
                     subtopic=subtopic,
                     question_distribution=question_distribution,
-                    level=level
+                    level=level,
+                    use_examples=use_examples
                 )
                 
                 # REMOVED: All the "Mock data for demonstration" code blocks

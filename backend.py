@@ -50,7 +50,8 @@ class MathQuestionGenerator:
         subject: str,
         subtopic: str,
         question_type: str,
-        level: int = 1
+        level: int = 1,
+        use_examples: bool = False
     ) -> dict:
         """
         Generate a single math question.
@@ -60,6 +61,7 @@ class MathQuestionGenerator:
             subtopic: Specific subtopic (e.g., "Algebra")
             question_type: Type of question ("MCQ", "Fill-in-the-Blank", "Yes/No")
             level: Difficulty level (1-6, default: 1)
+            use_examples: Whether to fetch and include database examples (default: False)
             
         Returns:
             Dictionary containing the generated question, solution, and answer
@@ -75,7 +77,8 @@ class MathQuestionGenerator:
             validation_errors=[],
             is_validated=False,
             has_answer=False,
-            revision_count=0
+            revision_count=0,
+            use_examples=use_examples
         )
         
         result = self.workflow.execute(initial_state)
@@ -95,7 +98,8 @@ class MathQuestionGenerator:
         subject: str,
         subtopic: str,
         question_distribution: dict,
-        level: int = 1
+        level: int = 1,
+        use_examples: bool = False
     ) -> List[dict]:
         """
         Generate multiple questions based on distribution.
@@ -106,6 +110,7 @@ class MathQuestionGenerator:
             question_distribution: Dict mapping question types to counts
                                  e.g., {"MCQ": 5, "Fill-in-the-Blank": 3}
             level: Difficulty level (1-6, default: 1)
+            use_examples: Whether to fetch and include database examples (default: False)
             
         Returns:
             List of generated question dictionaries
@@ -115,6 +120,8 @@ class MathQuestionGenerator:
         current = 0
         
         print(f"\nGenerating {total_questions} questions at Level {level}...")
+        if use_examples:
+            print("Using database examples as inspiration...")
         print("Using reactive rate-limiting (will retry on 429 errors).")
         print("(Each question requires ~3 API calls)\n")
         
@@ -127,7 +134,8 @@ class MathQuestionGenerator:
                         subject=subject,
                         subtopic=subtopic,
                         question_type=question_type,
-                        level=level
+                        level=level,
+                        use_examples=use_examples
                     )
                     questions.append(question)
                     print(f"✓ Successfully generated question {current}")

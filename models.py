@@ -22,6 +22,7 @@ class QuestionState(TypedDict):
         is_validated: Whether question passed validation
         has_answer: Whether answer passed validation
         revision_count: Number of times question has been revised
+        use_examples: Whether to fetch and include database examples in prompt
     """
     subject: str
     subtopic: str
@@ -34,3 +35,4 @@ class QuestionState(TypedDict):
     is_validated: bool
     has_answer: bool
     revision_count: int
+    use_examples: bool

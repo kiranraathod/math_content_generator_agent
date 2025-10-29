@@ -2,11 +2,12 @@
 Question Service - Handles question generation logic.
 Responsible for creating prompts and parsing LLM responses.
 """
-from typing import Dict
+from typing import Dict, Optional
 from langchain_core.messages import HumanMessage, SystemMessage
 from models import QuestionState
 from services.llm_service import LLMService
 from utils.LEVEL_DEFINITIONS import LEVELS
+from get_subtopic_examples import SubtopicExamplesRetriever
 
 
 class QuestionService:
@@ -29,6 +30,7 @@ class QuestionService:
             llm_service: LLM service instance for API calls
         """
         self.llm_service = llm_service
+        self.examples_retriever = SubtopicExamplesRetriever()
     
     def generate_question(self, state: QuestionState) -> Dict[str, str]:
         """
@@ -46,7 +48,7 @@ class QuestionService:
             HumanMessage(content=prompt)
         ]
 
-        print("Generating question with prompt:\    n", prompt)
+        print("Generating question with prompt:\n", prompt)
 
         response_content = self.llm_service.invoke_with_retry(messages)
         return self._parse_question_response(response_content)
@@ -98,11 +100,29 @@ and subtopic ({state['subtopic']}).
         """
         question_type = state['question_type']
         level = state.get('level', 1)
+        use_examples = state.get('use_examples', False)
         type_specific_prompt = self.QUESTION_TYPE_PROMPTS.get(question_type, '')
         
         # Get level definition
         level_key = f"level_{level}"
         level_definition = LEVELS.get(level_key, LEVELS["level_1"])
+        
+        # Fetch examples if requested
+        examples_text = ""
+        if use_examples:
+            try:
+                examples = self.examples_retriever.get_examples_for_subtopic(
+                    subtopic=state['subtopic'],
+                    subject=state['subject'],
+                    max_examples=2
+                )
+                if examples:
+                    examples_text = f"\n\n{examples}\nUse these examples as inspiration for style and format, but create a NEW unique question.\n"
+                else:
+                    examples_text = "\n\n(No examples found in database for this subtopic)\n"
+            except Exception as e:
+                print(f"Warning: Could not fetch examples: {e}")
+                examples_text = ""
         
         return f"""Generate a {question_type} math question.
 Subject: {state['subject']}
@@ -112,7 +132,7 @@ DIFFICULTY LEVEL {level}:
 {level_definition}
 
 {type_specific_prompt}
-
+{examples_text}
 Provide:
 1. The question clearly stated
 2. A detailed step-by-step solution
