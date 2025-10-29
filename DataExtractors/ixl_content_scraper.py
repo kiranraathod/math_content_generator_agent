@@ -36,7 +36,10 @@ def scrape_ixl_url(url: str, api_key: str = None) -> Optional[Dict]:
             formats=["screenshot"],
             only_main_content=True,
             max_age=172800000,
-            actions=[{"type":"click", "selector": 'button.explore-btn[aria-label="Close"]'}]
+            actions=[
+                {"type": "click", "selector": 'button.explore-btn[aria-label="Close"]'},
+                {"type": "wait", "milliseconds": 2000},
+            ]
         )
         
         # Try to convert to dict if possible
