@@ -76,7 +76,7 @@ class IXLToSupabaseManager:
         """
         result = {
             'question_latex': '',
-            'visual_elements': '',
+            'visual_elements_description': '',
             'question_type': ''
         }
         
@@ -102,7 +102,7 @@ class IXLToSupabaseManager:
             if current_section == 'latex' and line and not line.startswith('-'):
                 result['question_latex'] += line + ' '
             elif current_section == 'visual' and line and not line.startswith('-'):
-                result['visual_elements'] += line + ' '
+                result['visual_elements_description'] += line + ' '
             elif current_section == 'type' and line and not line.startswith('-'):
                 # Extract question type (look for MCQ, Fill in the Blank, True or False, etc.)
                 line_upper = line.upper()
@@ -112,16 +112,21 @@ class IXLToSupabaseManager:
                     result['question_type'] = 'Fill in the Blank'
                 elif 'YES/NO' in line_upper or 'TRUE/FALSE' in line_upper or 'TRUE OR FALSE' in line_upper:
                     result['question_type'] = 'True or False'
-                elif 'SHORT' in line_upper or 'OPEN' in line_upper:
-                    result['question_type'] = 'Short Answer'
+                elif 'FREE RESPONSE' in line_upper or 'OPEN' in line_upper:
+                    result['question_type'] = 'Free Response'
         
         # Clean up the results
         result['question_latex'] = result['question_latex'].strip()
-        result['visual_elements'] = result['visual_elements'].strip()
+        result['visual_elements_description'] = result['visual_elements_description'].strip()
         
-        # Default question type if not detected - use Short Answer as safe default
+        # Check if visual elements description indicates no visual elements
+        visual_lower = result['visual_elements_description'].lower()
+        if 'no visual' in visual_lower or not result['visual_elements_description']:
+            result['visual_elements_description'] = None  # Set to None if no visual elements
+        
+        # Default question type if not detected - use Fill in the Blank as safe default
         if not result['question_type']:
-            result['question_type'] = 'Short Answer'  # Default assumption
+            result['question_type'] = 'Fill in the Blank'  # Default assumption
         
         return result
     
@@ -182,14 +187,15 @@ class IXLToSupabaseManager:
             # Get screenshot URL if available
             screenshot_url = scrape_result.get('screenshot', None)
             
-            # Save to database
+            # Save to database with visual elements description
             db_record = self.db.add_subtopic_example(
                 subject=subject,
                 subtopic=subtopic_name,
                 question_latex=parsed['question_latex'],
                 question_type=parsed['question_type'],
                 website_link=url,
-                visual_elements_url=screenshot_url
+                visual_elements_url=screenshot_url,
+                visual_elements_description=parsed['visual_elements_description']
             )
             
             # Update cache
@@ -198,6 +204,10 @@ class IXLToSupabaseManager:
             
             print("✅ Successfully saved to database")
             print(f"   Record ID: {db_record.get('id')}")
+            if parsed['visual_elements_description']:
+                print(f"   Visual elements: {parsed['visual_elements_description'][:100]}...")
+            else:
+                print(f"   Visual elements: None")
             
             return {
                 'url': url,

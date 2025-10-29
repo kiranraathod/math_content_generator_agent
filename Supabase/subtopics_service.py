@@ -41,7 +41,8 @@ class SubtopicsService:
         question_latex: str,
         question_type: str,
         website_link: str,
-        visual_elements_url: Optional[str] = None
+        visual_elements_url: Optional[str] = None,
+        visual_elements_description: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Add a new subtopic example to the database.
@@ -53,6 +54,7 @@ class SubtopicsService:
             question_type: Type of question (e.g., "MCQ", "Fill-in-the-Blank", "Yes/No")
             website_link: URL of the IXL page
             visual_elements_url: Optional URL to screenshot or visual description
+            visual_elements_description: Optional text description of visual elements (graphs, diagrams, etc.)
             
         Returns:
             Dictionary containing the inserted record
@@ -67,7 +69,8 @@ class SubtopicsService:
                 "question_latex": question_latex,
                 "question_type": question_type,
                 "website_link": website_link,
-                "visual_elements_url": visual_elements_url
+                "visual_elements_url": visual_elements_url,
+                "visual_elements_description": visual_elements_description
                 # id, created_at, updated_at will be auto-generated
             }
             
@@ -249,7 +252,8 @@ if __name__ == "__main__":
         question_latex="Evaluate $3x + 2$ when $x = 5$",
         question_type="Fill-in-the-Blank",
         website_link="https://www.ixl.com/math/algebra-1/evaluate-variable-expressions-involving-integers",
-        visual_elements_url=None
+        visual_elements_url=None,
+        visual_elements_description=None
     )
     print(f"\nAdded example: {example}")
     
