@@ -5,6 +5,7 @@ from backend import MathQuestionGenerator
 from subjects_config import get_subjects, get_subtopics
 from utils.api_key_manager import load_api_key_from_env, save_api_key_to_env, clear_api_key
 from Supabase.supabase_service import SupabaseService
+from get_subtopic_examples import SubtopicExamplesRetriever
 
 # Load environment variables from .env file
 load_dotenv() 
@@ -49,8 +50,19 @@ if 'generated_questions' not in st.session_state:
     st.session_state.generated_questions = []
 if 'selected_subject' not in st.session_state:
     st.session_state.selected_subject = None
+if 'selected_subtopic' not in st.session_state:
+    st.session_state.selected_subtopic = None
+if 'examples_available' not in st.session_state:
+    st.session_state.examples_available = False
 if 'api_key' not in st.session_state:
     st.session_state.api_key = load_api_key_from_env()
+
+# Initialize the examples retriever
+try:
+    examples_retriever = SubtopicExamplesRetriever()
+except Exception as e:
+    examples_retriever = None
+    print(f"Warning: Could not initialize examples retriever: {e}")
 
 # --- Sidebar Configuration ---
 with st.sidebar:
@@ -152,6 +164,23 @@ with col1:
             disabled=not available_subtopics
         )
         
+        # Check if subtopic has changed and update examples availability
+        if st.session_state.selected_subtopic != subtopic:
+            st.session_state.selected_subtopic = subtopic
+            
+            # Check if examples are available for this subtopic
+            if subtopic and examples_retriever:
+                try:
+                    st.session_state.examples_available = examples_retriever.check_subtopic_exists(
+                        subtopic=subtopic,
+                        subject=subject
+                    )
+                except Exception as e:
+                    st.session_state.examples_available = False
+                    print(f"Error checking examples availability: {e}")
+            else:
+                st.session_state.examples_available = False
+        
         if not available_subtopics:
             st.info("Please select a subject to see available subtopics")
         
@@ -177,11 +206,20 @@ with col1:
         with st.expander("ℹ️ Level Description"):
             st.info(level_descriptions[level])
         
-        # Add checkbox for using examples
+        # Add checkbox for using examples with availability check
+        examples_checkbox_disabled = not st.session_state.examples_available
+        
+        # Show availability status
+        if st.session_state.examples_available:
+            st.success("✅ Examples available for this subtopic")
+        elif subtopic:  # Only show warning if a subtopic is selected
+            st.warning("⚠️ No examples available for this subtopic")
+        
         use_examples = st.checkbox(
             "📚 Use Database Examples",
             value=False,
-            help="Fetch example questions from the database for this subtopic to inspire the AI"
+            disabled=examples_checkbox_disabled,
+            help="Fetch example questions from the database for this subtopic to inspire the AI" if st.session_state.examples_available else "No examples available in database for this subtopic"
         )
         
         if use_examples:
