@@ -111,9 +111,9 @@ class IXLToSupabaseManager:
                 elif 'FILL' in line_upper or 'BLANK' in line_upper:
                     result['question_type'] = 'Fill in the Blank'
                 elif 'YES/NO' in line_upper or 'TRUE/FALSE' in line_upper or 'TRUE OR FALSE' in line_upper:
-                    result['question_type'] = 'True or False'
+                    result['question_type'] = 'Yes/No'
                 elif 'FREE RESPONSE' in line_upper or 'OPEN' in line_upper:
-                    result['question_type'] = 'Free Response'
+                    result['question_type'] = 'Short Answer'
         
         # Clean up the results
         result['question_latex'] = result['question_latex'].strip()
