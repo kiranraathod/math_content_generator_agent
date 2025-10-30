@@ -36,3 +36,4 @@ class QuestionState(TypedDict):
     has_answer: bool
     revision_count: int
     use_examples: bool
+    prompt: str

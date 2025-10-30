@@ -81,10 +81,12 @@ class WorkflowOrchestrator:
             Updated state with generated question
         """
         result = self.question_service.generate_question(state)
+        # Include the prompt in the state so downstream callers can access it
         return {
-            "question": result["question"],
-            "solution": result["solution"],
-            "answer": result["answer"],
+            "question": result.get("question"),
+            "solution": result.get("solution"),
+            "answer": result.get("answer"),
+            "prompt": result.get("prompt", ""),
             "revision_count": state.get("revision_count", 0)
         }
     

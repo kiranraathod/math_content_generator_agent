@@ -51,7 +51,10 @@ class QuestionService:
         print("Generating question with prompt:\n", prompt)
 
         response_content = self.llm_service.invoke_with_retry(messages)
-        return self._parse_question_response(response_content)
+        parsed = self._parse_question_response(response_content)
+        # Attach the prompt used to generate this question so callers can show it
+        parsed['prompt'] = prompt
+        return parsed
     
     def revise_question(self, state: QuestionState) -> Dict[str, int]:
         """
@@ -117,9 +120,9 @@ and subtopic ({state['subtopic']}).
                     max_examples=2
                 )
                 if examples:
-                    examples_text = f"\n\n{examples}\nUse these examples as inspiration for style and format, but create a NEW unique question.\n"
+                    examples_text = f"\n\n{examples}\nUse these examples as inspiration for the content, but create a NEW unique question.\n"
                 else:
-                    examples_text = "\n\n(No examples found in database for this subtopic)\n"
+                    examples_text = ""
             except Exception as e:
                 print(f"Warning: Could not fetch examples: {e}")
                 examples_text = ""
@@ -127,9 +130,6 @@ and subtopic ({state['subtopic']}).
         return f"""Generate a {question_type} math question.
 Subject: {state['subject']}
 Subtopic: {state['subtopic']}
-
-DIFFICULTY LEVEL {level}:
-{level_definition}
 
 {type_specific_prompt}
 {examples_text}

@@ -336,13 +336,26 @@ if st.session_state.generated_questions:
                 st.markdown(f"**Subtopic:** {question.get('subtopic', 'N/A')}")
                 st.markdown(f"**Type:** {question.get('type', 'N/A')}")
             with col_q2:
-                pass  # Removed Level from column
+                # Checkbox to show/hide the prompt that created this question (more reliable than a button)
+                toggle_key = f"toggle_prompt_{idx}"
+                # Initialize default if not present and render checkbox bound to session state
+                default = st.session_state.get(toggle_key, False)
+                checked = st.checkbox("Show prompt", value=default, key=toggle_key)
+                # 'checked' is automatically stored in st.session_state[toggle_key]
             
             # Moved Level to its own line
             level_num = question.get('level', 1)
             level_names = ['Foundation', 'Basic Application', 'Intermediate', 'Advanced', 'Expert', 'Master Challenge']
             level_name = level_names[level_num - 1] if 1 <= level_num <= 6 else 'Unknown'
             st.markdown(f"**Level:** {level_num} - {level_name}")
+
+            # If the prompt toggle is on, show the prompt used to generate this question (if available)
+            prompt_toggle_key = f"toggle_prompt_{idx}"
+            if st.session_state.get(prompt_toggle_key, False):
+                st.markdown("**Prompt used to generate this question:**")
+                prompt_text = question.get('prompt', '(No prompt found)')
+                # Use a code block to display the prompt clearly
+                st.code(prompt_text, language='text')
             
             st.markdown("**Question:**")
             st.write(question.get('question', 'N/A'))

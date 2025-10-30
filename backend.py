@@ -78,19 +78,21 @@ class MathQuestionGenerator:
             is_validated=False,
             has_answer=False,
             revision_count=0,
-            use_examples=use_examples
+            use_examples=use_examples,
+            prompt=""
         )
         
         result = self.workflow.execute(initial_state)
-        
+
         return self.export_service.format_question_for_export(
-            subject=result["subject"],
-            subtopic=result["subtopic"],
-            question=result["question"],
-            solution=result["solution"],
-            answer=result["answer"],
-            question_type=result["question_type"],
-            level=result["level"]
+            subject=result.get("subject", subject),
+            subtopic=result.get("subtopic", subtopic),
+            question=result.get("question", ""),
+            solution=result.get("solution", ""),
+            answer=result.get("answer", ""),
+            question_type=result.get("question_type", question_type),
+            level=result.get("level", level),
+            prompt=result.get("prompt", "")
         )
     
     def generate_questions_batch(
