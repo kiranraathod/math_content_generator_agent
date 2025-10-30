@@ -120,7 +120,9 @@ and subtopic ({state['subtopic']}).
                     max_examples=2
                 )
                 if examples:
-                    examples_text = f"\n\n{examples}\nUse these examples as inspiration for the content, but create a NEW unique question.\n"
+                    examples_text = f"""\n\n{examples}\nCreate one new, unique question that follows the style and structure of the example provided below.
+                                                        Do not copy or reuse the example content — only use it as a reference for tone, structure, and difficulty.\n"""
+                    
                 else:
                     examples_text = ""
             except Exception as e:
