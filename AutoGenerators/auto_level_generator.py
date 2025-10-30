@@ -59,22 +59,12 @@ class AutoLevelGenerator:
         """
         print("\n📚 Fetching subtopics with examples...")
         
-        # Get all subtopics
-        subtopic_names = self.examples_retriever.get_all_available_subtopics(subject=subject)
+        # Use the efficient method that fetches all data in one DB call
+        subtopics_info = self.examples_retriever.get_all_subtopics_with_summaries(subject=subject)
         
-        subtopics_info = []
-        for subtopic in subtopic_names:
-            # Get summary to find available question types
-            summary = self.examples_retriever.get_example_summary(subtopic, subject=subject)
-            
-            if summary and summary['total_examples'] > 0:
-                subtopics_info.append({
-                    'subtopic': subtopic,
-                    'subject': subject,
-                    'total_examples': summary['total_examples'],
-                    'question_types': list(summary['question_types'].keys()),
-                    'examples_with_visuals': summary['examples_with_visuals']
-                })
+        # Convert to the expected format with question_types as a list
+        for info in subtopics_info:
+            info['question_types'] = list(info['question_types'].keys())
         
         print(f"✓ Found {len(subtopics_info)} subtopics with examples")
         return subtopics_info

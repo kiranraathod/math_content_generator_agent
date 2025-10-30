@@ -41,7 +41,8 @@ class SubtopicExamplesRetriever:
         self,
         subtopic: str,
         subject: Optional[str] = None,
-        max_examples: int = 3
+        max_examples: int = 3,
+        cached_examples: Optional[List[Dict]] = None
     ) -> Optional[str]:
         """
         Get formatted example questions for a given subtopic.
@@ -50,6 +51,7 @@ class SubtopicExamplesRetriever:
             subtopic: The subtopic to search for (e.g., "Expressions - B.2")
             subject: Optional subject filter (e.g., "Algebra 1")
             max_examples: Maximum number of examples to return (default: 3)
+            cached_examples: Pre-fetched examples to avoid repeated DB calls
             
         Returns:
             Formatted string with examples, or None if no examples found
@@ -58,8 +60,11 @@ class SubtopicExamplesRetriever:
             return None
         
         try:
-            # Fetch examples from database
-            if subject:
+            # Fetch examples from database or use cached
+            if cached_examples is not None:
+                # Use cached examples and filter by subtopic
+                examples = [e for e in cached_examples if e.get('subtopic') == subtopic]
+            elif subject:
                 # If subject is provided, fetch by both subject and subtopic
                 all_examples = self.db.fetch_by_subject(subject)
                 examples = [e for e in all_examples if e.get('subtopic') == subtopic]
@@ -118,7 +123,8 @@ class SubtopicExamplesRetriever:
     def get_example_summary(
         self,
         subtopic: str,
-        subject: Optional[str] = None
+        subject: Optional[str] = None,
+        cached_examples: Optional[List[Dict]] = None
     ) -> Optional[Dict]:
         """
         Get a summary of available examples for a subtopic.
@@ -126,6 +132,7 @@ class SubtopicExamplesRetriever:
         Args:
             subtopic: The subtopic to search for
             subject: Optional subject filter
+            cached_examples: Pre-fetched examples to avoid repeated DB calls
             
         Returns:
             Dictionary with summary information, or None if no examples found
@@ -134,8 +141,11 @@ class SubtopicExamplesRetriever:
             return None
         
         try:
-            # Fetch examples
-            if subject:
+            # Fetch examples or use cached
+            if cached_examples is not None:
+                # Use cached examples and filter by subtopic
+                examples = [e for e in cached_examples if e.get('subtopic') == subtopic]
+            elif subject:
                 all_examples = self.db.fetch_by_subject(subject)
                 examples = [e for e in all_examples if e.get('subtopic') == subtopic]
             else:
@@ -208,6 +218,71 @@ class SubtopicExamplesRetriever:
             
         except Exception as e:
             print(f"Error fetching subtopics: {str(e)}")
+            return []
+    
+    def get_all_subtopics_with_summaries(self, subject: Optional[str] = None) -> List[Dict]:
+        """
+        Get all subtopics with their summaries efficiently (single DB fetch).
+        
+        Args:
+            subject: Optional subject filter
+            
+        Returns:
+            List of dictionaries with subtopic summaries
+        """
+        if not self.db:
+            return []
+        
+        try:
+            # Fetch all examples once (without verbose output)
+            if subject:
+                # Check if the method supports verbose parameter
+                try:
+                    all_examples = self.db.fetch_by_subject(subject, verbose=False)
+                except TypeError:
+                    # Fallback if verbose parameter not supported
+                    all_examples = self.db.fetch_by_subject(subject)
+            else:
+                all_examples = self.db.fetch_all()
+            
+            # Group examples by subtopic
+            subtopic_groups = {}
+            for example in all_examples:
+                subtopic = example.get('subtopic', '')
+                if subtopic:
+                    if subtopic not in subtopic_groups:
+                        subtopic_groups[subtopic] = []
+                    subtopic_groups[subtopic].append(example)
+            
+            # Build summaries for each subtopic
+            summaries = []
+            for subtopic, examples in subtopic_groups.items():
+                # Count question types
+                type_counts = {}
+                has_visuals = 0
+                
+                for example in examples:
+                    q_type = example.get('question_type', 'Unknown')
+                    type_counts[q_type] = type_counts.get(q_type, 0) + 1
+                    
+                    if example.get('visual_elements_description') or example.get('visual_elements_url'):
+                        has_visuals += 1
+                
+                summaries.append({
+                    'subtopic': subtopic,
+                    'subject': subject,
+                    'total_examples': len(examples),
+                    'question_types': type_counts,
+                    'examples_with_visuals': has_visuals
+                })
+            
+            # Sort by subtopic name
+            summaries.sort(key=lambda x: x['subtopic'])
+            
+            return summaries
+            
+        except Exception as e:
+            print(f"Error fetching subtopics with summaries: {str(e)}")
             return []
 
 

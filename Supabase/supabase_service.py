@@ -36,6 +36,37 @@ class SupabaseService:
         self.client: Client = create_client(self.url, self.key)
         self.table_name = "AiContent"
         self.valid_question_types = ['MCQ', 'Fill-in-the-Blank', 'Yes/No']
+        
+        # Question type normalization mapping
+        self.type_normalization = {
+            'Fill in the Blank': 'Fill-in-the-Blank',
+            'Fill-in-the-Blank': 'Fill-in-the-Blank',
+            'True or False': 'Yes/No',
+            'Yes/No': 'Yes/No',
+            'MCQ': 'MCQ',
+            'Multiple Choice': 'MCQ',
+        }
+    
+    def normalize_question_type(self, question_type: str) -> str:
+        """
+        Normalize question type to standard format.
+        
+        Args:
+            question_type: The question type to normalize
+            
+        Returns:
+            Normalized question type
+            
+        Raises:
+            ValueError: If question type cannot be normalized
+        """
+        normalized = self.type_normalization.get(question_type)
+        if not normalized:
+            raise ValueError(
+                f"Invalid question_type: '{question_type}'. "
+                f"Supported types: {list(self.type_normalization.keys())}"
+            )
+        return normalized
     
     def add_row(
         self,
@@ -115,18 +146,24 @@ class SupabaseService:
             ValueError: If any question_type is invalid
             Exception: If batch insertion fails
         """
-        # Validate all question_types before insertion
+        # Normalize and validate all question_types before insertion
+        normalized_rows = []
         for idx, row in enumerate(rows):
-            qt = row.get('question_type')
-            if not qt or qt not in self.valid_question_types:
-                raise ValueError(
-                    f"Invalid question_type in row {idx}: '{qt}'. "
-                    f"Must be one of {self.valid_question_types}"
-                )
+            normalized_row = row.copy()
+            qt = normalized_row.get('question_type')
+            if not qt:
+                raise ValueError(f"Missing question_type in row {idx}")
+            
+            try:
+                normalized_row['question_type'] = self.normalize_question_type(qt)
+            except ValueError as e:
+                raise ValueError(f"Row {idx}: {str(e)}")
+            
+            normalized_rows.append(normalized_row)
         
         try:
-            response = self.client.table(self.table_name).insert(rows).execute()
-            print(f"✓ Successfully added {len(rows)} questions")
+            response = self.client.table(self.table_name).insert(normalized_rows).execute()
+            print(f"✓ Successfully added {len(normalized_rows)} questions")
             return response.data
             
         except Exception as e:

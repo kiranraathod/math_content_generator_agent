@@ -120,11 +120,12 @@ class SubtopicsService:
             print(f"✗ Error fetching all: {str(e)}")
             raise
     
-    def fetch_by_subject(self, subject: str) -> List[Dict[str, Any]]:
+    def fetch_by_subject(self, subject: str, verbose: bool = True) -> List[Dict[str, Any]]:
         """Fetch examples filtered by subject."""
         try:
             response = self.client.table(self.table_name).select("*").eq("subject", subject).execute()
-            print(f"✓ Fetched {len(response.data)} examples for subject '{subject}'")
+            if verbose:
+                print(f"✓ Fetched {len(response.data)} examples for subject '{subject}'")
             return response.data
         except Exception as e:
             print(f"✗ Error fetching by subject: {str(e)}")
