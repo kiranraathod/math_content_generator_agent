@@ -40,7 +40,11 @@ class ValidationService:
         ]
         
         response_content = self.llm_service.invoke_with_retry(messages)
-        return self._parse_validation_response(response_content)
+        is_valid, errors = self._parse_validation_response(response_content)
+        print(f"Question validation result: {'VALID' if is_valid else 'INVALID'}")
+        if errors:
+            print(f"Validation errors: {errors}")
+        return is_valid, errors
     
     def validate_answer(self, state: QuestionState) -> Dict[str, any]:
         """
@@ -61,10 +65,14 @@ class ValidationService:
         response_content = self.llm_service.invoke_with_retry(messages)
         is_valid, errors = self._parse_validation_response(response_content)
         
-        return {
+        result = {
             "has_answer": is_valid,
             "validation_errors": errors
         }
+        print(f"Answer validation result: {'VALID' if is_valid else 'INVALID'}")
+        if errors:
+            print(f"Validation errors: {errors}")
+        return result
     
     def _create_question_validation_prompt(self, state: QuestionState) -> str:
         """
