@@ -21,7 +21,7 @@ def test_prompt_includes_concise_instruction():
     except Exception:
         # If initialization fails (expected without real API key), that's fine
         # We only need to test the prompt generation, not the actual LLM call
-        pass
+        llm_service = None
     
     # Create question service
     question_service = QuestionService(llm_service)
@@ -78,7 +78,7 @@ def test_prompt_structure():
     try:
         llm_service = LLMService(api_key="dummy_key_for_testing")
     except Exception:
-        pass
+        llm_service = None
     
     question_service = QuestionService(llm_service)
     
