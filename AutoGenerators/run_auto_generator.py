@@ -9,6 +9,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from AutoGenerators.auto_level_generator import AutoLevelGenerator
+import random
 
 
 def print_menu():
@@ -52,6 +53,10 @@ def generate_random_subtopics(generator):
     auto_upload = input("Auto-upload to database? (yes/no, default: yes): ").strip().lower()
     auto_upload = auto_upload != 'no'
     
+    # Ask whether to include examples with visual elements
+    visuals = input("Include examples with visual elements? (yes/no, default: yes): ").strip().lower()
+    include_visuals = visuals != 'no'
+
     print(f"\n🚀 Starting generation...")
     print(f"   Subtopics: {num_subtopics}")
     print(f"   Questions per subtopic: {questions_per}")
@@ -63,16 +68,60 @@ def generate_random_subtopics(generator):
     if confirm != 'yes':
         print("Cancelled.")
         return
-    
-    results = generator.generate_for_random_subtopics(
-        num_subtopics=num_subtopics,
-        subject=subject,
-        questions_per_subtopic=questions_per,
-        level=level,
-        auto_upload=auto_upload
-    )
-    
+
+    # If user doesn't want visuals, perform client-side filtering of subtopics
+    # because AutoLevelGenerator.generate_for_random_subtopics doesn't accept
+    # a visuals flag. We'll fetch available subtopics and pick random ones
+    # that match the visual preference, then call generate_for_specific_subtopic
+    # for each selected subtopic.
+    all_subtopics = generator.get_subtopics_with_examples(subject=subject)
+
+    if not include_visuals:
+        filtered = [s for s in all_subtopics if s.get('examples_with_visuals', 0) == 0]
+    else:
+        filtered = all_subtopics
+
+    if not filtered:
+        # If no subtopics match the "no visuals" preference, offer to proceed
+        # with visuals enabled instead of failing silently.
+        choice = input(f"\nNo subtopics without visuals found for {subject}. Proceed with visuals anyway? (yes/no, default: no): ").strip().lower()
+        if choice == 'yes':
+            filtered = all_subtopics
+        else:
+            print("Cancelled.")
+            return
+
+    num_to_select = min(num_subtopics, len(filtered))
+    selected = random.sample(filtered, num_to_select)
+
+    total_generated = 0
+    total_uploaded = 0
+    processed = 0
+
+    for info in selected:
+        subtopic = info['subtopic']
+        print(f"\n{'='*80}")
+        print(f"Processing subtopic: {subtopic}")
+        print(f"{'='*80}")
+
+        results = generator.generate_for_specific_subtopic(
+            subtopic=subtopic,
+            subject=subject,
+            questions_per_subtopic=questions_per,
+            level=level,
+            auto_upload=auto_upload
+        )
+
+        if results.get('success'):
+            processed += 1
+            total_generated += results.get('generated', 0)
+            total_uploaded += results.get('uploaded', 0)
+
     print("\n✅ Generation complete!")
+    print(f"Processed subtopics: {processed}/{num_to_select}")
+    print(f"Total questions generated: {total_generated}")
+    if auto_upload:
+        print(f"Total questions uploaded: {total_uploaded}")
 
 
 def generate_specific_subtopic(generator):
@@ -248,6 +297,10 @@ def batch_generate(generator):
     print(f"   Questions per subtopic: {questions_per}")
     print(f"   Level: {level}")
     
+    # Ask whether to include examples with visual elements
+    visuals = input("Include examples with visual elements? (yes/no, default: yes): ").strip().lower()
+    include_visuals = visuals != 'no'
+
     confirm = input("\nProceed? (yes/no): ").strip().lower()
     if confirm != 'yes':
         print("Cancelled.")
@@ -255,22 +308,44 @@ def batch_generate(generator):
     
     total_generated = 0
     total_uploaded = 0
-    
+
     for batch_num in range(1, num_batches + 1):
         print(f"\n{'='*80}")
         print(f"BATCH {batch_num}/{num_batches}")
         print(f"{'='*80}")
-        
-        results = generator.generate_for_random_subtopics(
-            num_subtopics=subtopics_per_batch,
-            subject="Algebra 1",
-            questions_per_subtopic=questions_per,
-            level=level,
-            auto_upload=True
-        )
-        
-        total_generated += results['generated']
-        total_uploaded += results['uploaded']
+
+        # Fetch and filter subtopics according to visual preference
+        all_subtopics = generator.get_subtopics_with_examples(subject="Algebra 1")
+        if not include_visuals:
+            candidates = [s for s in all_subtopics if s.get('visual_elements_description', 0) == 0]
+        else:
+            candidates = all_subtopics
+
+        if not candidates:
+            # Offer to proceed with visuals if none match the "no visuals" filter
+            choice = input("No subtopics without visuals available. Proceed with visuals for this batch? (yes/no, default: no): ").strip().lower()
+            if choice == 'yes':
+                candidates = all_subtopics
+            else:
+                print("Skipping this batch.")
+                continue
+
+        num_to_select = min(subtopics_per_batch, len(candidates))
+        selected = random.sample(candidates, num_to_select)
+
+        # Generate for each selected subtopic
+        for info in selected:
+            subtopic = info['subtopic']
+            results = generator.generate_for_specific_subtopic(
+                subtopic=subtopic,
+                subject="Algebra 1",
+                questions_per_subtopic=questions_per,
+                level=level,
+                auto_upload=True
+            )
+
+            total_generated += results.get('generated', 0)
+            total_uploaded += results.get('uploaded', 0)
     
     print("\n" + "="*80)
     print("BATCH GENERATION COMPLETE")

@@ -265,7 +265,7 @@ class SubtopicExamplesRetriever:
                     q_type = example.get('question_type', 'Unknown')
                     type_counts[q_type] = type_counts.get(q_type, 0) + 1
                     
-                    if example.get('visual_elements_description') or example.get('visual_elements_url'):
+                    if example.get('visual_elements_description'):
                         has_visuals += 1
                 
                 summaries.append({
