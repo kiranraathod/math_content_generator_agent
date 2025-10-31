@@ -9,21 +9,24 @@ from services.question_service import QuestionService
 from services.llm_service import LLMService
 
 
+def create_mock_llm_service():
+    """
+    Helper function to create a mock LLM service for testing.
+    Returns None if initialization fails (expected without real API key).
+    """
+    try:
+        return LLMService(api_key="dummy_key_for_testing")
+    except (ValueError, Exception):
+        # Expected to fail without real API key, which is fine for prompt testing
+        return None
+
+
 def test_prompt_includes_concise_instruction():
     """
     Test that the generated prompt explicitly instructs the LLM
     to provide concise answers only, not full sentences.
     """
-    # Create a mock LLM service (we won't actually call the API)
-    # We just need the service to exist for initialization
-    try:
-        llm_service = LLMService(api_key="dummy_key_for_testing")
-    except Exception:
-        # If initialization fails (expected without real API key), that's fine
-        # We only need to test the prompt generation, not the actual LLM call
-        llm_service = None
-    
-    # Create question service
+    llm_service = create_mock_llm_service()
     question_service = QuestionService(llm_service)
     
     # Create a test state
@@ -75,11 +78,7 @@ def test_prompt_structure():
     Test that the prompt maintains the expected structure with
     QUESTION, SOLUTION, and ANSWER sections.
     """
-    try:
-        llm_service = LLMService(api_key="dummy_key_for_testing")
-    except Exception:
-        llm_service = None
-    
+    llm_service = create_mock_llm_service()
     question_service = QuestionService(llm_service)
     
     test_state = QuestionState(
