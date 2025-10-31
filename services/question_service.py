@@ -18,7 +18,7 @@ class QuestionService:
     
     QUESTION_TYPE_PROMPTS = {
         "MCQ": "Create a multiple choice question with 4 options (A, B, C, D). Mark the correct answer clearly.",
-        "Fill-in-the-Blank": "Create a fill-in-the-blank question with clear blanks marked with underscores. Example : Fill in the Blank Solve |x - 5| = 8 → x = ____ or ____.",
+        "Fill-in-the-Blank": "Create a fill-in-the-blank question with each blank marked with a question mark (?). Example: Fill in the Blank Solve |x - 5| = 8 → x = ? or ?.",
         "Yes/No": "Create a yes or no question that can be clearly answered with either Yes or No. Example : A student says: “|-7| = -7 because of the negative sign.” Correct or Wrong?"
     }
     
@@ -138,7 +138,7 @@ Subtopic: {state['subtopic']}
 Provide:
 1. The question clearly stated
 2. A detailed step-by-step solution
-3. The final answer
+3. The final answer (concise result only - NOT a full sentence or explanation)
 
 Format your response as:
 QUESTION: [your question here]
