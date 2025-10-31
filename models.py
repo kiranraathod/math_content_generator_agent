@@ -22,6 +22,8 @@ class QuestionState(TypedDict):
         is_validated: Whether question passed validation
         has_answer: Whether answer passed validation
         revision_count: Number of times question has been revised
+        validation_attempts: Number of validation attempts made
+        validation_failed: Whether question failed validation after max attempts
         use_examples: Whether to fetch and include database examples in prompt
     """
     subject: str
@@ -35,5 +37,7 @@ class QuestionState(TypedDict):
     is_validated: bool
     has_answer: bool
     revision_count: int
+    validation_attempts: int
+    validation_failed: bool
     use_examples: bool
     prompt: str

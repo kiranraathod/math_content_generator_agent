@@ -13,6 +13,8 @@ class WorkflowOrchestrator:
     Uses LangGraph to manage state transitions.
     """
     
+    MAX_VALIDATION_ATTEMPTS = 2  # Maximum number of validation attempts before skipping
+    
     def __init__(self, question_service: QuestionService, validation_service: ValidationService):
         """
         Initialize the workflow orchestrator.
@@ -100,10 +102,21 @@ class WorkflowOrchestrator:
         Returns:
             Updated state with validation results
         """
+        validation_attempts = state.get("validation_attempts", 0) + 1
         is_valid, errors = self.validation_service.validate_question(state)
+        
+        # If max attempts reached, mark as failed
+        validation_failed = False
+        if validation_attempts >= self.MAX_VALIDATION_ATTEMPTS and not is_valid:
+            print(f"❌ ERROR: Max validation attempts ({self.MAX_VALIDATION_ATTEMPTS}) reached. Question failed validation.")
+            print(f"   Final errors: {errors}")
+            validation_failed = True
+        
         return {
             "is_validated": is_valid,
-            "validation_errors": errors
+            "validation_errors": errors,
+            "validation_attempts": validation_attempts,
+            "validation_failed": validation_failed
         }
     
     def _validate_answer_node(self, state: QuestionState) -> QuestionState:
@@ -116,7 +129,16 @@ class WorkflowOrchestrator:
         Returns:
             Updated state with validation results
         """
-        return self.validation_service.validate_answer(state)
+        validation_attempts = state.get("validation_attempts", 0)
+        result = self.validation_service.validate_answer(state)
+        
+        # If max attempts reached, mark as failed
+        if validation_attempts >= self.MAX_VALIDATION_ATTEMPTS and not result.get("has_answer", False):
+            print(f"❌ ERROR: Max validation attempts ({self.MAX_VALIDATION_ATTEMPTS}) reached. Answer validation failed.")
+            print(f"   Final errors: {result.get('validation_errors', [])}")
+            result["validation_failed"] = True
+        
+        return result
     
     def _revise_question_node(self, state: QuestionState) -> QuestionState:
         """
@@ -154,6 +176,10 @@ class WorkflowOrchestrator:
         Returns:
             Next edge to follow
         """
+        # Skip if validation already failed
+        if state.get("validation_failed", False):
+            return "revise"
+        
         if state.get("is_validated", False):
             return "validate_answer"
         return "revise"
@@ -168,6 +194,10 @@ class WorkflowOrchestrator:
         Returns:
             Next edge to follow
         """
+        # If validation failed after max attempts, end immediately
+        if state.get("validation_failed", False):
+            return "end"
+        
         revision_count = state.get("revision_count", 0)
         
         if state.get("has_answer", False) and state.get("is_validated", False):

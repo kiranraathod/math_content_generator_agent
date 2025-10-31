@@ -27,9 +27,19 @@ class ExportService:
         Raises:
             Exception: If export fails
         """
+        # Filter out any questions that failed validation
+        valid_questions = [
+            q for q in questions 
+            if not q.get('validation_failed', False)
+            and q.get('question', '').strip() != ''
+        ]
+        
+        if len(valid_questions) < len(questions):
+            print(f"⚠️  Export: Filtered out {len(questions) - len(valid_questions)} invalid questions")
+        
         try:
             with open(filename, 'w', encoding='utf-8') as f:
-                json.dump(questions, f, indent=2, ensure_ascii=False)
+                json.dump(valid_questions, f, indent=2, ensure_ascii=False)
             return filename
         except Exception as e:
             raise Exception(f"Error exporting to JSON: {str(e)}")

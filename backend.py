@@ -78,11 +78,20 @@ class MathQuestionGenerator:
             is_validated=False,
             has_answer=False,
             revision_count=0,
+            validation_attempts=0,
+            validation_failed=False,
             use_examples=use_examples,
             prompt=""
         )
         
         result = self.workflow.execute(initial_state)
+
+        # Check if validation failed and raise an exception to skip this question
+        if result.get("validation_failed", False):
+            error_msg = f"Question validation failed after {self.workflow.MAX_VALIDATION_ATTEMPTS} attempts"
+            if result.get("validation_errors"):
+                error_msg += f": {', '.join(result.get('validation_errors'))}"
+            raise ValueError(error_msg)
 
         return self.export_service.format_question_for_export(
             subject=result.get("subject", subject),
@@ -141,6 +150,10 @@ class MathQuestionGenerator:
                     )
                     questions.append(question)
                     print(f"✓ Successfully generated question {current}")
+                except ValueError as e:
+                    # Validation failure - skip this question
+                    print(f"⚠️  Skipping {question_type} question: {str(e)}")
+                    continue
                 except Exception as e:
                     print(f"✗ Error generating {question_type} question: {str(e)}")
                     continue

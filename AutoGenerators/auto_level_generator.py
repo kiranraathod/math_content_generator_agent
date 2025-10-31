@@ -109,9 +109,17 @@ class AutoLevelGenerator:
                     use_examples=True  # Always use examples for consistency
                 )
                 
-                questions.append(question)
-                print(f"   ✓ Successfully generated question {i+1}")
+                # Double-check: Only append if question is valid and not marked as failed
+                if question and not question.get('validation_failed', False):
+                    questions.append(question)
+                    print(f"   ✓ Successfully generated question {i+1}")
+                else:
+                    print(f"   ⚠️  Question {i+1} failed validation, skipping")
                 
+            except ValueError as e:
+                # Validation failure - skip this question
+                print(f"   ⚠️  Question {i+1} failed validation: {str(e)}")
+                continue
             except Exception as e:
                 print(f"   ✗ Error generating question {i+1}: {str(e)}")
                 continue
@@ -133,11 +141,25 @@ class AutoLevelGenerator:
             print("⚠️  No questions to upload")
             return 0
         
-        print(f"\n☁️  Uploading {len(questions)} questions to database...")
+        # Filter out any questions that somehow failed validation
+        valid_questions = [
+            q for q in questions 
+            if not q.get('validation_failed', False) 
+            and q.get('question', '').strip() != ''
+        ]
+        
+        if len(valid_questions) < len(questions):
+            print(f"⚠️  Filtered out {len(questions) - len(valid_questions)} invalid questions")
+        
+        if not valid_questions:
+            print("⚠️  No valid questions to upload after filtering")
+            return 0
+        
+        print(f"\n☁️  Uploading {len(valid_questions)} questions to database...")
         
         # Prepare data for batch upload
         rows_to_upload = []
-        for question in questions:
+        for question in valid_questions:
             row = {
                 "Subject": question.get('subject', 'Unknown'),
                 "Subtopic": question.get('subtopic', 'Unknown'),
