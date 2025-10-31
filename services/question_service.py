@@ -138,7 +138,7 @@ Subtopic: {state['subtopic']}
 Provide:
 1. The question clearly stated
 2. A detailed step-by-step solution
-3. The final answer
+3. The final answer (concise result only - NOT a full sentence or explanation)
 
 Format your response as:
 QUESTION: [your question here]
