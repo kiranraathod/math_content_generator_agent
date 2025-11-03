@@ -2,11 +2,11 @@
 Data models for the Math Content Generator.
 Defines the state structure used throughout the application.
 """
-from typing import TypedDict, List, Annotated
+from typing import TypedDict, List, Annotated, Optional
 import operator
 
 
-class QuestionState(TypedDict):
+class QuestionState(TypedDict, total=False):
     """
     State object representing a math question throughout its lifecycle.
     
@@ -25,6 +25,11 @@ class QuestionState(TypedDict):
         validation_attempts: Number of validation attempts made
         validation_failed: Whether question failed validation after max attempts
         use_examples: Whether to fetch and include database examples in prompt
+        prompt: The prompt used to generate this question
+        
+        # MCQ-specific fields (optional)
+        options: List of 4 multiple choice options (for MCQ type only)
+        correct_option: The correct option letter A, B, C, or D (for MCQ type only)
     """
     subject: str
     subtopic: str
@@ -41,3 +46,7 @@ class QuestionState(TypedDict):
     validation_failed: bool
     use_examples: bool
     prompt: str
+    
+    # MCQ-specific fields (optional)
+    options: List[str]
+    correct_option: str

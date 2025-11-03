@@ -84,15 +84,30 @@ class ValidationService:
         Returns:
             Formatted validation prompt
         """
+        question_text = state['question']
+        question_type = state['question_type']
+        
+        # For MCQ, include the options in validation
+        if question_type == 'MCQ' and state.get('options'):
+            options_text = "\nOptions:\n"
+            for i, option in enumerate(state['options'], 1):
+                letter = chr(64 + i)  # A, B, C, D
+                options_text += f"{letter}) {option}\n"
+            question_text = f"{question_text}\n{options_text}"
+        
         return f"""Validate this math question for clarity and completeness:
 
-Question: {state['question']}
+Question Type: {question_type}
+Question: {question_text}
 
 Check if:
 1. The question is clear and unambiguous
 2. All necessary information is provided
-3. The question matches the type: {state['question_type']}
+3. The question matches the type: {question_type}
 4. The mathematical notation is correct
+{f"5. For MCQ: Exactly 4 options are provided (A, B, C, D)" if question_type == 'MCQ' else ""}
+
+NOTE: For MCQ questions, the options are stored separately and have been included above.
 
 Respond with either:
 VALID
@@ -110,15 +125,33 @@ INVALID: [list specific issues]
         Returns:
             Formatted validation prompt
         """
+        question_text = state['question']
+        question_type = state['question_type']
+        answer = state['answer']
+        
+        # For MCQ, include options and correct option
+        additional_context = ""
+        if question_type == 'MCQ' and state.get('options'):
+            options_text = "\nOptions:\n"
+            for i, option in enumerate(state['options'], 1):
+                letter = chr(64 + i)  # A, B, C, D
+                options_text += f"{letter}) {option}\n"
+            
+            correct_option = state.get('correct_option', 'Not specified')
+            additional_context = f"{options_text}\nCorrect Option: {correct_option}\n"
+        
         return f"""Validate this answer for the given question:
 
-Question: {state['question']}
-Answer: {state['answer']}
+Question Type: {question_type}
+Question: {question_text}
+{additional_context}
+Answer: {answer}
 
 Check if:
 1. The answer is correct based on the question
 2. The answer format matches the question type
 3. The answer is clear and complete
+{f"4. For MCQ: The answer includes the correct option letter ({state.get('correct_option', 'N/A')})" if question_type == 'MCQ' else ""}
 
 Respond with either:
 VALID

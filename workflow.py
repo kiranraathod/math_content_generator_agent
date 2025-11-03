@@ -83,14 +83,23 @@ class WorkflowOrchestrator:
             Updated state with generated question
         """
         result = self.question_service.generate_question(state)
-        # Include the prompt in the state so downstream callers can access it
-        return {
+        
+        # Build return dict with all generated fields
+        return_dict = {
             "question": result.get("question"),
             "solution": result.get("solution"),
             "answer": result.get("answer"),
             "prompt": result.get("prompt", ""),
             "revision_count": state.get("revision_count", 0)
         }
+        
+        # Add MCQ-specific fields if they exist
+        if "options" in result:
+            return_dict["options"] = result["options"]
+        if "correct_option" in result:
+            return_dict["correct_option"] = result["correct_option"]
+        
+        return return_dict
     
     def _validate_question_node(self, state: QuestionState) -> QuestionState:
         """
