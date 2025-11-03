@@ -53,6 +53,7 @@ def analyze_ixl_screenshot(screenshot_url: str, question: str = None):
    - Yes/No: If the question requires a Yes/No or True/False answer
    - Free Response: If the question requires a written explanation or open-ended answer
    - Matching: If the question requires matching items or pairs
+   - Plot the Point: If the question presents a graph where the user must select one or more specific points
    - Other: Specify the type if it doesn't fit the above categories
 
 4. MAIN TOPIC/CONCEPT:
