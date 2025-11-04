@@ -6,6 +6,7 @@ from typing import Dict, Optional
 from langchain_core.messages import HumanMessage, SystemMessage
 from models import QuestionState
 from services.llm_service import LLMService
+from services.structured_models import MathQuestionOutput, MCQQuestion
 from utils.LEVEL_DEFINITIONS import LEVELS
 from get_subtopic_examples import SubtopicExamplesRetriever
 
@@ -22,19 +23,32 @@ class QuestionService:
         "Yes/No": "Create a yes or no question that can be clearly answered with either Yes or No. Example : A student says: “|-7| = -7 because of the negative sign.” Correct or Wrong?"
     }
     
-    def __init__(self, llm_service: LLMService):
+    def __init__(self, llm_service: LLMService, examples_retriever=None):
         """
         Initialize the question service.
         
         Args:
             llm_service: LLM service instance for API calls
+            examples_retriever: Optional SubtopicExamplesRetriever instance (lazy-loaded if None)
         """
         self.llm_service = llm_service
-        self.examples_retriever = SubtopicExamplesRetriever()
+        self._examples_retriever = examples_retriever
+    
+    @property
+    def examples_retriever(self):
+        """Lazy-load examples retriever to avoid DB connection issues"""
+        if self._examples_retriever is None:
+            self._examples_retriever = SubtopicExamplesRetriever()
+        return self._examples_retriever
+    
+    @examples_retriever.setter
+    def examples_retriever(self, value):
+        """Allow setting examples retriever (e.g., for mocking)"""
+        self._examples_retriever = value
     
     def generate_question(self, state: QuestionState) -> Dict[str, str]:
         """
-        Generate a new question based on the provided state.
+        Generate a new question based on the provided state using structured output.
         
         Args:
             state: Current question state with subject, subtopic, and type
@@ -48,48 +62,118 @@ class QuestionService:
             HumanMessage(content=prompt)
         ]
 
-        print("Generating question with prompt:\n", prompt)
+        print("Generating question with structured output...")
+        print(f"Question Type: {state['question_type']}, Level: {state.get('level', 1)}")
 
-        response_content = self.llm_service.invoke_with_retry(messages)
-        parsed = self._parse_question_response(response_content)
-        # Attach the prompt used to generate this question so callers can show it
-        parsed['prompt'] = prompt
+        # Choose the right model based on question type
+        response_model = MCQQuestion if state['question_type'] == 'MCQ' else MathQuestionOutput
+        
+        # Get structured output
+        result = self.llm_service.invoke_structured(
+            messages=messages,
+            response_model=response_model,
+            max_retries=3
+        )
+        
+        # Convert Pydantic model to dict
+        parsed = {
+            "question": result.question,
+            "solution": result.solution,
+            "answer": result.answer,
+            "prompt": prompt
+        }
+        
+        # Add MCQ-specific fields if applicable
+        if isinstance(result, MCQQuestion):
+            parsed["options"] = result.options
+            parsed["correct_option"] = result.correct_option
+        
+        print(f"✅ Successfully generated {state['question_type']} question with structured output")
+        
         return parsed
     
-    def revise_question(self, state: QuestionState) -> Dict[str, int]:
+    def revise_question(self, state: QuestionState) -> Dict[str, any]:
         """
-        Revise a question based on validation errors.
+        Revise a question based on validation errors using structured output.
         
         Args:
             state: Current question state with validation errors
             
         Returns:
-            Dictionary with updated revision count
+            Dictionary with revised question, solution, answer, and updated revision count
         """
         errors = state.get("validation_errors", [])
         error_text = "\n".join(errors) if errors else "General quality improvement needed"
+        question_type = state['question_type']
+        level = state.get('level', 1)
         
-        prompt = f"""The previous question needs revision based on these issues:
+        # MCQ-specific instruction
+        mcq_note = ""
+        if question_type == "MCQ":
+            mcq_note = "\n- For MCQ answer field: Must include the correct option letter (e.g., 'C) x = 5' or 'Option C: x = 5')"
+        
+        # Build revision prompt with context
+        prompt = f"""Revise this {question_type} question based on the following validation issues:
+
+VALIDATION ERRORS:
 {error_text}
 
-Original Question: {state['question']}
-Original Answer: {state.get('answer', 'Not provided')}
+ORIGINAL CONTENT:
+Question: {state['question']}
+Solution: {state.get('solution', 'Not provided')}
+Answer: {state.get('answer', 'Not provided')}
 
-Please revise the question addressing these issues while maintaining the subject ({state['subject']}) 
-and subtopic ({state['subtopic']}).
+REQUIREMENTS:
+- Subject: {state['subject']}
+- Subtopic: {state['subtopic']}
+- Question Type: {question_type}
+- Level: {level}
+
+Address ALL validation errors while maintaining the educational value and difficulty level.
+Provide a complete revised question with solution and answer.
+
+Your response will be automatically parsed as JSON. Provide:
+- question: The revised question text
+- solution: Step-by-step solution
+- answer: Final answer only (concise){mcq_note}
+- difficulty_justification: Why this matches level {level}
+- question_type_confirmation: "{question_type}"
 """
         
         messages = [
-            SystemMessage(content="You are an expert at improving educational content."),
+            SystemMessage(content="You are an expert at improving educational content based on feedback."),
             HumanMessage(content=prompt)
         ]
         
-        self.llm_service.invoke_with_retry(messages)
+        print(f"🔄 Revising question with structured output (attempt {state.get('revision_count', 0) + 1})...")
         
-        return {
+        # Choose appropriate model
+        response_model = MCQQuestion if question_type == 'MCQ' else MathQuestionOutput
+        
+        # Get structured revision
+        result = self.llm_service.invoke_structured(
+            messages=messages,
+            response_model=response_model,
+            max_retries=3
+        )
+        
+        # Build return dict
+        revised = {
+            "question": result.question,
+            "solution": result.solution,
+            "answer": result.answer,
             "revision_count": state.get("revision_count", 0) + 1,
-            "validation_errors": []
+            "validation_errors": []  # Clear errors after revision
         }
+        
+        # Add MCQ-specific fields if applicable
+        if isinstance(result, MCQQuestion):
+            revised["options"] = result.options
+            revised["correct_option"] = result.correct_option
+        
+        print(f"✅ Question revised successfully")
+        
+        return revised
     
     def _create_generation_prompt(self, state: QuestionState) -> str:
         """
@@ -128,25 +212,32 @@ and subtopic ({state['subtopic']}).
                 print(f"Warning: Could not fetch examples: {e}")
                 examples_text = ""
         
+        # MCQ-specific instruction for answer format
+        mcq_answer_note = ""
+        if question_type == "MCQ":
+            mcq_answer_note = "\n- For MCQ: answer field must include the correct option letter (e.g., 'C) x = 5' or 'Option C: x = 5')"
+        
         return f"""Generate a {question_type} math question.
 Subject: {state['subject']}
 Subtopic: {state['subtopic']}
+Level: {level} ({level_key})
 
 {type_specific_prompt}
 {examples_text}
-Provide:
-1. The question clearly stated
-2. A detailed step-by-step solution
-3. The final answer (concise result only - NOT a full sentence or explanation)
 
-Format your response as:
-QUESTION: [your question here]
-SOLUTION: [step-by-step solution here]
-ANSWER: [final answer here]
+Your response will be automatically parsed as JSON. Provide:
+- question: The complete question text, clearly stated
+- solution: Step-by-step solution with numbered steps
+- answer: ONLY the final result (e.g., "x = 4" or "42"), NOT a full sentence or explanation{mcq_answer_note}
+- difficulty_justification: Brief explanation of why this matches level {level} difficulty
+- question_type_confirmation: "{question_type}"
 """
     
     def _parse_question_response(self, content: str) -> Dict[str, str]:
         """
+        DEPRECATED: Legacy text parsing method - kept for reference only.
+        Use structured output (generate_question) instead.
+        
         Parse the LLM response to extract question, solution, and answer.
         
         Args:
@@ -155,6 +246,8 @@ ANSWER: [final answer here]
         Returns:
             Dictionary with parsed question, solution, and answer
         """
+        print("⚠️  WARNING: Using deprecated text parsing method. Consider using structured output.")
+        
         question = ""
         solution = ""
         answer = ""

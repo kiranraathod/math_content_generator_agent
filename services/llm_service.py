@@ -4,9 +4,12 @@ Implements retry logic and error handling for API calls.
 """
 import time
 import re
-from typing import List
+from typing import List, Type, TypeVar
+from pydantic import BaseModel, ValidationError
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import BaseMessage
+
+T = TypeVar('T', bound=BaseModel)
 
 
 class LLMService:
@@ -100,3 +103,39 @@ class LLMService:
             Total API call count
         """
         return self.api_call_count
+    
+    def invoke_structured(
+        self, 
+        messages: List[BaseMessage], 
+        response_model: Type[T],
+        max_retries: int = 3
+    ) -> T:
+        """
+        Invoke with strict schema enforcement using LangChain's built-in structured output.
+        
+        Args:
+            messages: List of messages to send to the LLM
+            response_model: Pydantic model class for response validation
+            max_retries: Maximum number of retry attempts (default: 3)
+            
+        Returns:
+            Validated Pydantic model instance
+            
+        Raises:
+            ValueError: If validation fails after all retries
+        """
+        # Use LangChain's native with_structured_output method
+        structured_llm = self.llm.with_structured_output(response_model, method="json_schema")
+        
+        for attempt in range(max_retries):
+            try:
+                self.api_call_count += 1
+                result = structured_llm.invoke(messages)
+                return result
+                
+            except ValidationError as e:
+                if attempt < max_retries - 1:
+                    print(f"Schema validation failed, retry {attempt + 1}")
+                    time.sleep(2 ** attempt)
+                else:
+                    raise ValueError(f"Schema validation failed after {max_retries} attempts: {e}")
