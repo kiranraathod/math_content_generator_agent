@@ -2,7 +2,10 @@
 Workflow Orchestrator - Manages the LangGraph state machine.
 Coordinates the question generation, validation, and revision process.
 """
+import os
+from typing import Optional, Dict, Any
 from langgraph.graph import StateGraph, END
+from langchain_core.runnables import RunnableConfig
 from models import QuestionState
 from services import QuestionService, ValidationService
 
@@ -27,6 +30,62 @@ class WorkflowOrchestrator:
         self.validation_service = validation_service
         self.workflow = StateGraph(QuestionState)
         self._build_workflow()
+        
+        # Configure LangSmith tracing
+        self._configure_langsmith()
+    
+    def _configure_langsmith(self):
+        """
+        Configure LangSmith for observability and monitoring.
+        Checks for environment variables and enables tracing if configured.
+        """
+        langsmith_enabled = os.getenv("LANGSMITH_TRACING", "false").lower() == "true"
+        
+        if langsmith_enabled:
+            api_key = os.getenv("LANGSMITH_API_KEY")
+            project_name = os.getenv("LANGSMITH_PROJECT", "math-content-generator")
+            
+            if api_key:
+                print(f"LangSmith tracing enabled for project: {project_name}")
+                self.langsmith_config = {
+                    "run_name": "math_question_workflow",
+                    "project_name": project_name,
+                    "tags": ["math-generator", "langgraph", "question-validation"]
+                }
+            else:
+                print("Warning: LANGSMITH_TRACING is true but LANGSMITH_API_KEY not found")
+                self.langsmith_config = None
+        else:
+            self.langsmith_config = None
+    
+    def _create_run_config(self, state: QuestionState) -> Optional[RunnableConfig]:
+        """
+        Create RunnableConfig with LangSmith metadata for enhanced tracing.
+        
+        Args:
+            state: Current question state
+            
+        Returns:
+            RunnableConfig with metadata or None if LangSmith not configured
+        """
+        if not self.langsmith_config:
+            return None
+        
+        metadata = {
+            "subject": state.get("subject", "unknown"),
+            "subtopic": state.get("subtopic", "unknown"),
+            "question_type": state.get("question_type", "unknown"),
+            "level": state.get("level", 0),
+            "revision_count": state.get("revision_count", 0),
+            "validation_attempts": state.get("validation_attempts", 0)
+        }
+        
+        return RunnableConfig(
+            run_name=self.langsmith_config["run_name"],
+            tags=self.langsmith_config["tags"],
+            metadata=metadata
+        )
+
     
     def _build_workflow(self):
         """Build the LangGraph workflow with nodes and edges."""
@@ -220,6 +279,7 @@ class WorkflowOrchestrator:
     def execute(self, initial_state: QuestionState) -> QuestionState:
         """
         Execute the workflow with the given initial state.
+        Includes LangSmith tracing configuration if enabled.
         
         Args:
             initial_state: Starting state for the workflow
@@ -227,4 +287,11 @@ class WorkflowOrchestrator:
         Returns:
             Final state after workflow completion
         """
-        return self.app.invoke(initial_state)
+        config = self._create_run_config(initial_state)
+        
+        if config:
+            # Execute with LangSmith tracing
+            return self.app.invoke(initial_state, config=config)
+        else:
+            # Execute without tracing
+            return self.app.invoke(initial_state)
