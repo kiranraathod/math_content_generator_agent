@@ -6,29 +6,43 @@ import os
 from typing import Optional, Dict, Any
 from langgraph.graph import StateGraph, END
 from langchain_core.runnables import RunnableConfig
-from models import QuestionState
+from langgraph.runtime import Runtime
+from models import QuestionState, InputState, OutputState
 from services import QuestionService, ValidationService
+from services.config import MathGeneratorConfig
 
 
 class WorkflowOrchestrator:
     """
     Orchestrates the workflow for generating and validating math questions.
-    Uses LangGraph to manage state transitions.
+    Uses LangGraph to manage state transitions with configuration support.
     """
     
-    MAX_VALIDATION_ATTEMPTS = 2  # Maximum number of validation attempts before skipping
-    
-    def __init__(self, question_service: QuestionService, validation_service: ValidationService):
+    def __init__(
+        self,
+        question_service: QuestionService,
+        validation_service: ValidationService,
+        config: Optional[MathGeneratorConfig] = None
+    ):
         """
         Initialize the workflow orchestrator.
         
         Args:
             question_service: Service for generating questions
             validation_service: Service for validating content
+            config: Optional configuration schema for LangGraph Studio integration
         """
         self.question_service = question_service
         self.validation_service = validation_service
-        self.workflow = StateGraph(QuestionState)
+        self.config = config or MathGeneratorConfig()
+        
+        # Create workflow with input/output schemas and config schema for Studio integration
+        self.workflow = StateGraph(
+            state_schema=QuestionState,
+            input=InputState,
+            output=OutputState,
+            context_schema=MathGeneratorConfig
+        )
         self._build_workflow()
         
         # Configure LangSmith tracing
@@ -85,23 +99,225 @@ class WorkflowOrchestrator:
             tags=self.langsmith_config["tags"],
             metadata=metadata
         )
-
     
     def _build_workflow(self):
         """Build the LangGraph workflow with nodes and edges."""
+
+        def _generate_question_node(state: QuestionState, runtime: Runtime[MathGeneratorConfig]) -> QuestionState:
+            """
+            Node for generating a new question.
+            
+            Args:
+                state: Current state
+                runtime: LangGraph runtime with access to context
+                
+            Returns:
+                Updated state with generated question
+            """
+            result = self.question_service.generate_question(state)
+            
+            # Build return dict with all generated fields
+            return_dict = {
+                "question": result.get("question"),
+                "solution": result.get("solution"),
+                "answer": result.get("answer"),
+                "prompt": result.get("prompt", ""),
+                "revision_count": state.get("revision_count", 0)
+            }
+            
+            # Add MCQ-specific fields if they exist
+            if "options" in result:
+                return_dict["options"] = result["options"]
+            if "correct_option" in result:
+                return_dict["correct_option"] = result["correct_option"]
+            
+            return {**state, **return_dict}
+
+        def _validate_question_node(state: QuestionState, runtime: Runtime[MathGeneratorConfig]) -> QuestionState:
+            """
+            Node for validating a question.
+            
+            Args:
+                state: Current state
+                runtime: LangGraph runtime with access to context
+                
+            Returns:
+                Updated state with validation results
+            """
+            validation_attempts = state.get("validation_attempts", 0) + 1
+            is_valid, errors = self.validation_service.validate_question(state)
+            
+            # Use max_validation_attempts from config
+            max_attempts = runtime.context.max_validation_attempts
+            
+            # If max attempts reached, mark as failed
+            validation_failed = False
+            if validation_attempts >= max_attempts and not is_valid:
+                print(f"Max validation attempts ({max_attempts}) reached. Question failed validation.")
+                print(f"Final errors: {errors}")
+                validation_failed = True
+            
+            return {
+                **state,
+                "is_validated": is_valid,
+                "validation_errors": errors,
+                "validation_attempts": validation_attempts,
+                "validation_failed": validation_failed
+            }
+
+        def _validate_answer_node(state: QuestionState, runtime: Runtime[MathGeneratorConfig]) -> QuestionState:
+            """
+            Node for validating an answer.
+            
+            Args:
+                state: Current state
+                runtime: LangGraph runtime with access to context
+                
+            Returns:
+                Updated state with validation results
+            """
+            validation_attempts = state.get("validation_attempts", 0)
+            result = self.validation_service.validate_answer(state)
+            
+            # Use max_validation_attempts from config
+            max_attempts = runtime.context.max_validation_attempts
+            
+            # If max attempts reached, mark as failed
+            if validation_attempts >= max_attempts and not result.get("has_answer", False):
+                print(f"Max validation attempts ({max_attempts}) reached. Answer validation failed.")
+                print(f"Final errors: {result.get('validation_errors', [])}")
+                result["validation_failed"] = True
+            
+            return {**state, **result}
+
+        def _revise_question_node(state: QuestionState, runtime: Runtime[MathGeneratorConfig]) -> QuestionState:
+            """
+            Node for revising a question based on validation errors.
+            
+            Args:
+                state: Current state
+                runtime: LangGraph runtime with access to context
+                
+            Returns:
+                Updated state with revision count
+            """
+            return self.question_service.revise_question(state)
+
+        def _should_validate_question(state: QuestionState, runtime: Runtime[MathGeneratorConfig]) -> str:
+            """
+            Determine if question should be validated.
+            
+            Args:
+                state: Current state
+                runtime: LangGraph runtime with access to context
+                
+            Returns:
+                Next edge to follow
+            """
+            if state.get("question"):
+                return "validate"
+            return "end"
+
+        def _should_validate_answer(state: QuestionState, runtime: Runtime[MathGeneratorConfig]) -> str:
+            """
+            Determine if answer should be validated.
+            
+            Args:
+                state: Current state
+                runtime: LangGraph runtime with access to context
+                
+            Returns:
+                Next edge to follow
+            """
+            # Skip if validation already failed
+            if state.get("validation_failed", False):
+                return "revise"
+            
+            if state.get("is_validated", False):
+                return "validate_answer"
+            return "revise"
+
+        def _should_revise(state: QuestionState, runtime: Runtime[MathGeneratorConfig]) -> str:
+            """
+            Determine if question should be revised or completed.
+            
+            Args:
+                state: Current state
+                runtime: LangGraph runtime with access to context
+                
+            Returns:
+                Next edge to follow
+            """
+            # If validation failed after max attempts, end immediately
+            if state.get("validation_failed", False):
+                return "end"
+            
+            revision_count = state.get("revision_count", 0)
+            
+            if state.get("has_answer", False) and state.get("is_validated", False):
+                return "end"
+            
+            # Use max_revision_attempts from config
+            if revision_count >= runtime.context.max_revision_attempts:
+                return "end"
+            
+            return "revise"
+
+        def _prepare_state_node(state: QuestionState, runtime: Runtime[MathGeneratorConfig]) -> QuestionState:
+            """
+            Prepares the initial state by setting default values if they are missing.
+            This node acts as a safeguard against incomplete API inputs.
+            Provides sensible defaults for all required input fields.
+            """
+            # Set defaults for missing required fields
+            if "subject" not in state or not state.get("subject"):
+                state["subject"] = "Mathematics"
+                print("Defaulted 'subject' to 'Mathematics' as it was missing from the input.")
+            
+            if "subtopic" not in state or not state.get("subtopic"):
+                state["subtopic"] = "Algebra"
+                print("Defaulted 'subtopic' to 'Algebra' as it was missing from the input.")
+            
+            if "question_type" not in state or not state.get("question_type"):
+                state["question_type"] = "MCQ"
+                print("Defaulted 'question_type' to 'MCQ' as it was missing from the input.")
+            
+            if "level" not in state or not state.get("level"):
+                state["level"] = 2
+                print("Defaulted 'level' to 2 (Intermediate) as it was missing from the input.")
+            
+            # Initialize optional fields with defaults if missing
+            if "use_examples" not in state:
+                state["use_examples"] = False
+            
+            if "revision_count" not in state:
+                state["revision_count"] = 0
+            
+            if "validation_attempts" not in state:
+                state["validation_attempts"] = 0
+            
+            if "validation_errors" not in state:
+                state["validation_errors"] = []
+            
+            return state
+
         # Add nodes
-        self.workflow.add_node("generate_question", self._generate_question_node)
-        self.workflow.add_node("validate_question", self._validate_question_node)
-        self.workflow.add_node("validate_answer", self._validate_answer_node)
-        self.workflow.add_node("revise_question", self._revise_question_node)
+        self.workflow.add_node("prepare_state", _prepare_state_node)
+        self.workflow.add_node("generate_question", _generate_question_node)
+        self.workflow.add_node("validate_question", _validate_question_node)
+        self.workflow.add_node("validate_answer", _validate_answer_node)
+        self.workflow.add_node("revise_question", _revise_question_node)
         
         # Set entry point
-        self.workflow.set_entry_point("generate_question")
+        self.workflow.set_entry_point("prepare_state")
+
+        # Add edge from prepare_state to generate_question
+        self.workflow.add_edge("prepare_state", "generate_question")
         
         # Add conditional edges
         self.workflow.add_conditional_edges(
             "generate_question",
-            self._should_validate_question,
+            _should_validate_question,
             {
                 "validate": "validate_question",
                 "end": END
@@ -110,7 +326,7 @@ class WorkflowOrchestrator:
         
         self.workflow.add_conditional_edges(
             "validate_question",
-            self._should_validate_answer,
+            _should_validate_answer,
             {
                 "validate_answer": "validate_answer",
                 "revise": "revise_question"
@@ -119,7 +335,7 @@ class WorkflowOrchestrator:
         
         self.workflow.add_conditional_edges(
             "validate_answer",
-            self._should_revise,
+            _should_revise,
             {
                 "end": END,
                 "revise": "revise_question"
@@ -130,151 +346,6 @@ class WorkflowOrchestrator:
         
         # Compile the workflow
         self.app = self.workflow.compile()
-    
-    def _generate_question_node(self, state: QuestionState) -> QuestionState:
-        """
-        Node for generating a new question.
-        
-        Args:
-            state: Current state
-            
-        Returns:
-            Updated state with generated question
-        """
-        result = self.question_service.generate_question(state)
-        
-        # Build return dict with all generated fields
-        return_dict = {
-            "question": result.get("question"),
-            "solution": result.get("solution"),
-            "answer": result.get("answer"),
-            "prompt": result.get("prompt", ""),
-            "revision_count": state.get("revision_count", 0)
-        }
-        
-        # Add MCQ-specific fields if they exist
-        if "options" in result:
-            return_dict["options"] = result["options"]
-        if "correct_option" in result:
-            return_dict["correct_option"] = result["correct_option"]
-        
-        return return_dict
-    
-    def _validate_question_node(self, state: QuestionState) -> QuestionState:
-        """
-        Node for validating a question.
-        
-        Args:
-            state: Current state
-            
-        Returns:
-            Updated state with validation results
-        """
-        validation_attempts = state.get("validation_attempts", 0) + 1
-        is_valid, errors = self.validation_service.validate_question(state)
-        
-        # If max attempts reached, mark as failed
-        validation_failed = False
-        if validation_attempts >= self.MAX_VALIDATION_ATTEMPTS and not is_valid:
-            print(f"❌ ERROR: Max validation attempts ({self.MAX_VALIDATION_ATTEMPTS}) reached. Question failed validation.")
-            print(f"   Final errors: {errors}")
-            validation_failed = True
-        
-        return {
-            "is_validated": is_valid,
-            "validation_errors": errors,
-            "validation_attempts": validation_attempts,
-            "validation_failed": validation_failed
-        }
-    
-    def _validate_answer_node(self, state: QuestionState) -> QuestionState:
-        """
-        Node for validating an answer.
-        
-        Args:
-            state: Current state
-            
-        Returns:
-            Updated state with validation results
-        """
-        validation_attempts = state.get("validation_attempts", 0)
-        result = self.validation_service.validate_answer(state)
-        
-        # If max attempts reached, mark as failed
-        if validation_attempts >= self.MAX_VALIDATION_ATTEMPTS and not result.get("has_answer", False):
-            print(f"❌ ERROR: Max validation attempts ({self.MAX_VALIDATION_ATTEMPTS}) reached. Answer validation failed.")
-            print(f"   Final errors: {result.get('validation_errors', [])}")
-            result["validation_failed"] = True
-        
-        return result
-    
-    def _revise_question_node(self, state: QuestionState) -> QuestionState:
-        """
-        Node for revising a question based on validation errors.
-        
-        Args:
-            state: Current state
-            
-        Returns:
-            Updated state with revision count
-        """
-        return self.question_service.revise_question(state)
-    
-    def _should_validate_question(self, state: QuestionState) -> str:
-        """
-        Determine if question should be validated.
-        
-        Args:
-            state: Current state
-            
-        Returns:
-            Next edge to follow
-        """
-        if state.get("question"):
-            return "validate"
-        return "end"
-    
-    def _should_validate_answer(self, state: QuestionState) -> str:
-        """
-        Determine if answer should be validated.
-        
-        Args:
-            state: Current state
-            
-        Returns:
-            Next edge to follow
-        """
-        # Skip if validation already failed
-        if state.get("validation_failed", False):
-            return "revise"
-        
-        if state.get("is_validated", False):
-            return "validate_answer"
-        return "revise"
-    
-    def _should_revise(self, state: QuestionState) -> str:
-        """
-        Determine if question should be revised or completed.
-        
-        Args:
-            state: Current state
-            
-        Returns:
-            Next edge to follow
-        """
-        # If validation failed after max attempts, end immediately
-        if state.get("validation_failed", False):
-            return "end"
-        
-        revision_count = state.get("revision_count", 0)
-        
-        if state.get("has_answer", False) and state.get("is_validated", False):
-            return "end"
-        
-        if revision_count >= 3:
-            return "end"
-        
-        return "revise"
     
     def execute(self, initial_state: QuestionState) -> QuestionState:
         """
@@ -287,11 +358,11 @@ class WorkflowOrchestrator:
         Returns:
             Final state after workflow completion
         """
-        config = self._create_run_config(initial_state)
+        run_config = self._create_run_config(initial_state)
         
-        if config:
+        if run_config:
             # Execute with LangSmith tracing
-            return self.app.invoke(initial_state, config=config)
+            return self.app.invoke(initial_state, config=run_config)
         else:
             # Execute without tracing
             return self.app.invoke(initial_state)

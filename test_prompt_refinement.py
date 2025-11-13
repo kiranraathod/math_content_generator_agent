@@ -4,9 +4,11 @@ This test validates the fix for the issue where Final Answer sometimes
 includes full or partial solutions instead of concise results.
 """
 import sys
+from unittest.mock import patch
 from models import QuestionState
 from services.question_service import QuestionService
 from services.llm_service import LLMService
+from services.structured_models import MathQuestionOutput, MCQQuestion
 
 
 def create_mock_llm_service():
@@ -20,8 +22,26 @@ def create_mock_llm_service():
         # Expected to fail without real API key, which is fine for prompt testing
         return None
 
+# Create a mock response object that the llm_service.invoke_structured would return
+mock_response = MathQuestionOutput(
+    question="This is a test question.",
+    solution="This is a test solution.",
+    answer="This is a test answer.",
+    difficulty_justification="Test justification.",
+    question_type_confirmation="Fill-in-the-Blank"
+)
+mock_mcq_response = MCQQuestion(
+    question="This is a test MCQ question.",
+    solution="This is a test MCQ solution.",
+    answer="This is a test MCQ answer.",
+    options=["A) 1", "B) 2", "C) 3", "D) 4"],
+    correct_option="A",
+    difficulty_justification="Test justification.",
+    question_type_confirmation="MCQ"
+)
 
-def test_prompt_includes_concise_instruction():
+@patch('services.llm_service.LLMService.invoke_structured', return_value=mock_response)
+def test_prompt_includes_concise_instruction(mock_invoke):
     """
     Test that the generated prompt explicitly instructs the LLM
     to provide concise answers only, not full sentences.
@@ -48,8 +68,9 @@ def test_prompt_includes_concise_instruction():
         prompt=""
     )
     
-    # Generate the prompt (this doesn't call the API, just creates the prompt string)
-    prompt = question_service._create_generation_prompt(test_state)
+    # Generate the prompt by calling the public method
+    result = question_service.generate_question(test_state)
+    prompt = result.get("prompt", "")
     
     # Verify the prompt includes the concise instruction
     print("\n" + "="*70)
@@ -60,56 +81,107 @@ def test_prompt_includes_concise_instruction():
     print(prompt)
     print("-"*70)
     
-    # Check for the new instruction
-    required_text = "concise result only - NOT a full sentence or explanation"
+        # Check for the new instruction
     
-    if required_text.lower() in prompt.lower():
-        print("\n✓ PASS: Prompt includes instruction for concise answers")
-        print(f"  Found: '{required_text}'")
-        return True
-    else:
-        print("\n✗ FAIL: Prompt does not include instruction for concise answers")
-        print(f"  Expected to find: '{required_text}'")
-        return False
-
-
-def test_prompt_structure():
-    """
-    Test that the prompt maintains the expected structure with
-    QUESTION, SOLUTION, and ANSWER sections.
-    """
-    llm_service = create_mock_llm_service()
-    question_service = QuestionService(llm_service)
+        required_text = "NOT a full sentence or explanation"
     
-    test_state = QuestionState(
-        subject="Mathematics",
-        subtopic="Algebra",
-        question_type="MCQ",
-        level=1,
-        question="",
-        solution="",
-        answer="",
-        validation_errors=[],
-        is_validated=False,
-        has_answer=False,
-        revision_count=0,
-        validation_attempts=0,
-        validation_failed=False,
-        use_examples=False,
-        prompt=""
-    )
+        
     
-    prompt = question_service._create_generation_prompt(test_state)
+        if required_text.lower() in prompt.lower():
     
-    print("\n" + "="*70)
-    print("TEST: Verify Prompt Structure")
-    print("="*70)
+            print("\n✓ PASS: Prompt includes instruction for concise answers")
     
-    required_sections = [
-        "QUESTION:",
-        "SOLUTION:",
-        "ANSWER:"
-    ]
+            print(f"  Found: '{required_text}'")
+    
+            return True
+    
+        else:
+    
+            print("\n✗ FAIL: Prompt does not include instruction for concise answers")
+    
+            print(f"  Expected to find: '{required_text}'")
+    
+            return False
+    
+    
+    
+    @patch('services.llm_service.LLMService.invoke_structured', return_value=mock_mcq_response)
+    
+    def test_prompt_structure(mock_invoke):
+    
+        """
+    
+        Test that the prompt maintains the expected structure with
+    
+        JSON-style fields.
+    
+        """
+    
+        llm_service = create_mock_llm_service()
+    
+        question_service = QuestionService(llm_service)
+    
+        
+    
+        test_state = QuestionState(
+    
+            subject="Mathematics",
+    
+            subtopic="Algebra",
+    
+            question_type="MCQ",
+    
+            level=1,
+    
+            question="",
+    
+            solution="",
+    
+            answer="",
+    
+            validation_errors=[],
+    
+            is_validated=False,
+    
+            has_answer=False,
+    
+            revision_count=0,
+    
+            validation_attempts=0,
+    
+            validation_failed=False,
+    
+            use_examples=False,
+    
+            prompt=""
+    
+        )
+    
+        
+    
+        result = question_service.generate_question(test_state)
+    
+        prompt = result.get("prompt", "")
+    
+        
+    
+        print("\n" + "="*70)
+    
+        print("TEST: Verify Prompt Structure")
+    
+        print("="*70)
+    
+        
+    
+        required_sections = [
+    
+            "- question:",
+    
+            "- solution:",
+    
+            "- answer:"
+    
+        ]
     
     all_present = True
     for section in required_sections:
