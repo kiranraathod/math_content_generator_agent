@@ -134,36 +134,6 @@ st.markdown("""
 col1, col2 = st.columns([3, 2])
 
 with col1:
-    # ============================================================================
-    # LESSON GENERATION SECTION (NEW)
-    # ============================================================================
-    with st.container(border=True):
-        st.subheader("📚 Lesson Generation")
-        
-        col_desc, col_toggle = st.columns([3, 1])
-        
-        with col_desc:
-            st.markdown("""
-            Generate a friendly, engaging lesson with real-world examples and emojis before creating questions.
-            Perfect for introducing new topics to students! 🎓
-            """)
-        
-        with col_toggle:
-            generate_lesson = st.toggle(
-                "Enable Lesson",
-                value=False,
-                key="lesson_toggle",
-                help="Toggle to generate a lesson along with questions"
-            )
-        
-        if generate_lesson:
-            st.success("✅ A lesson will be generated first, followed by questions")
-        else:
-            st.info("ℹ️ Questions only (no lesson)")
-    
-    # ============================================================================
-    # QUESTION PARAMETERS SECTION
-    # ============================================================================
     with st.container(border=True):
         st.subheader("Question Parameters")
         
@@ -264,6 +234,7 @@ with col1:
         )
         
         if total_questions > 3:
+            # MODIFIED: Removed the inaccurate time calculation
             st.warning(f"Generating {total_questions} questions may take a few minutes due to rate limiting")
 
 with col2:
@@ -315,8 +286,10 @@ if generate_btn:
         st.error("Question type counts must sum to the Total Number of Questions")
     else:
         try:
-            with st.spinner(f"Generating {'lesson and ' if generate_lesson else ''}{calculated_total} questions... (This may take a moment)"):
+            # MODIFIED: Updated spinner text
+            with st.spinner(f"Generating {calculated_total} questions... (This may take a moment)"):
                 
+                # UNCOMMENTED and FIXED: This now calls the new backend
                 generator = MathQuestionGenerator(api_key=api_key, model=model)
                 
                 question_distribution = {}
@@ -327,18 +300,21 @@ if generate_btn:
                 if yes_no_count > 0:
                     question_distribution["Yes/No"] = yes_no_count
                 
-                # Call backend with lesson generation flag
+                # REMOVED: st.info(f"Simulating generation for: ...")
+                
+                # UNCOMMENTED: This is the REAL call to the backend
                 questions = generator.generate_questions_batch(
                     subject=subject,
                     subtopic=subtopic,
                     question_distribution=question_distribution,
                     level=level,
-                    use_examples=use_examples,
-                    generate_lesson=generate_lesson  # Pass the lesson flag
+                    use_examples=use_examples
                 )
                 
+                # REMOVED: All the "Mock data for demonstration" code blocks
+                
                 st.session_state.generated_questions = questions
-                st.success(f"Successfully generated {len(questions)} questions{' with lesson' if generate_lesson else ''}")
+                st.success(f"Successfully generated {len(questions)} questions")
                 
                 # Show the real API call count
                 st.info(f"Total API calls made: {generator.llm_service.get_api_call_count()}")
@@ -350,41 +326,7 @@ if generate_btn:
 # --- Results Display ---
 if st.session_state.generated_questions:
     st.markdown("---")
-    
-    # Display lesson first if it was generated
-    if st.session_state.generated_questions and st.session_state.generated_questions[0].get("lesson_title"):
-        st.header("📚 Generated Lesson")
-        
-        lesson = st.session_state.generated_questions[0]
-        
-        # Lesson Title
-        st.markdown(f"### {lesson['lesson_title']}")
-        
-        # Introduction
-        with st.expander("📖 Introduction", expanded=True):
-            st.markdown(lesson['lesson_introduction'])
-        
-        # Real-world Example
-        with st.expander("🌍 Real-World Example", expanded=True):
-            st.markdown(lesson['real_world_example'])
-        
-        # Key Concepts
-        with st.expander("💡 Key Concepts", expanded=True):
-            for idx, concept in enumerate(lesson.get('key_concepts', []), 1):
-                st.markdown(f"**{idx}.** {concept}")
-        
-        # Definitions
-        with st.expander("📌 Definitions", expanded=True):
-            st.markdown(lesson['definitions'])
-        
-        # Practice Tips
-        with st.expander("✨ Practice Tips", expanded=True):
-            st.markdown(lesson['practice_tips'])
-        
-        st.markdown("---")
-    
-    # Display questions
-    st.header("📝 Generated Questions")
+    st.header("Generated Questions")
     
     for idx, question in enumerate(st.session_state.generated_questions, 1):
         with st.expander(f"Question {idx} - {question.get('type', 'Unknown')}", expanded=True):
@@ -394,21 +336,25 @@ if st.session_state.generated_questions:
                 st.markdown(f"**Subtopic:** {question.get('subtopic', 'N/A')}")
                 st.markdown(f"**Type:** {question.get('type', 'N/A')}")
             with col_q2:
+                # Checkbox to show/hide the prompt that created this question (more reliable than a button)
                 toggle_key = f"toggle_prompt_{idx}"
+                # Initialize default if not present and render checkbox bound to session state
                 default = st.session_state.get(toggle_key, False)
                 checked = st.checkbox("Show prompt", value=default, key=toggle_key)
+                # 'checked' is automatically stored in st.session_state[toggle_key]
             
-            # Level display
+            # Moved Level to its own line
             level_num = question.get('level', 1)
             level_names = ['Foundation', 'Basic Application', 'Intermediate', 'Advanced', 'Expert', 'Master Challenge']
             level_name = level_names[level_num - 1] if 1 <= level_num <= 6 else 'Unknown'
             st.markdown(f"**Level:** {level_num} - {level_name}")
 
-            # Show prompt if toggle is on
+            # If the prompt toggle is on, show the prompt used to generate this question (if available)
             prompt_toggle_key = f"toggle_prompt_{idx}"
             if st.session_state.get(prompt_toggle_key, False):
                 st.markdown("**Prompt used to generate this question:**")
                 prompt_text = question.get('prompt', '(No prompt found)')
+                # Use a code block to display the prompt clearly
                 st.code(prompt_text, language='text')
             
             st.markdown("**Question:**")
@@ -442,8 +388,10 @@ if st.session_state.generated_questions:
     with col3_btn:
         if st.button("☁️ Upload to Database", use_container_width=True, type="primary"):
             try:
+                # Initialize Supabase service
                 supabase_service = SupabaseService()
                 
+                # Prepare data for batch upload
                 rows_to_upload = []
                 for question in st.session_state.generated_questions:
                     row = {
@@ -456,6 +404,7 @@ if st.session_state.generated_questions:
                     }
                     rows_to_upload.append(row)
                 
+                # Upload to database
                 with st.spinner("Uploading to database..."):
                     result = supabase_service.add_rows_batch(rows_to_upload)
                     st.success(f"✅ Successfully uploaded {len(result)} questions to database!")
@@ -477,11 +426,10 @@ st.markdown("""
 
 This application uses **LangGraph** to create a reliable workflow for generating math questions:
 
-1. **Lesson Generation** (Optional): AI creates a friendly, engaging lesson with real-world examples
-2. **Question Generation**: AI creates a math question based on your parameters
-3. **Question Validation**: Ensures the question is clear and complete
-4. **Answer Validation**: Verifies the answer is correct and properly formatted
-5. **Revision Loop**: If validation fails, the question is revised automatically
+1. **Question Generation**: AI creates a math question based on your parameters.
+2. **Question Validation**: Ensures the question is clear and complete.
+3. **Answer Validation**: Verifies the answer is correct and properly formatted.
+4. **Revision Loop**: If validation fails, the question is revised automatically.
 """)
 
 st.markdown("---")

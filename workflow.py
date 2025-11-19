@@ -8,7 +8,7 @@ from langgraph.graph import StateGraph, END
 from langchain_core.runnables import RunnableConfig
 from langgraph.runtime import Runtime
 from models import QuestionState, InputState, OutputState
-from services import QuestionService, ValidationService
+from services import QuestionService, ValidationService, LessonService
 from services.config import MathGeneratorConfig
 
 
@@ -22,6 +22,7 @@ class WorkflowOrchestrator:
         self,
         question_service: QuestionService,
         validation_service: ValidationService,
+        lesson_service: LessonService,
         config: Optional[MathGeneratorConfig] = None
     ):
         """
@@ -30,10 +31,12 @@ class WorkflowOrchestrator:
         Args:
             question_service: Service for generating questions
             validation_service: Service for validating content
+            lesson_service: Service for generating lessons
             config: Optional configuration schema for LangGraph Studio integration
         """
         self.question_service = question_service
         self.validation_service = validation_service
+        self.lesson_service = lesson_service
         self.config = config or MathGeneratorConfig()
         
         # Create workflow with input/output schemas and config schema for Studio integration
@@ -72,33 +75,39 @@ class WorkflowOrchestrator:
         else:
             self.langsmith_config = None
     
-    def _create_run_config(self, state: QuestionState) -> Optional[RunnableConfig]:
+    def _create_run_config(self, state: QuestionState) -> RunnableConfig:
         """
-        Create RunnableConfig with LangSmith metadata for enhanced tracing.
+        Create RunnableConfig with config context and optional LangSmith metadata.
         
         Args:
             state: Current question state
             
         Returns:
-            RunnableConfig with metadata or None if LangSmith not configured
+            RunnableConfig with context and metadata
         """
-        if not self.langsmith_config:
-            return None
-        
-        metadata = {
-            "subject": state.get("subject", "unknown"),
-            "subtopic": state.get("subtopic", "unknown"),
-            "question_type": state.get("question_type", "unknown"),
-            "level": state.get("level", 0),
-            "revision_count": state.get("revision_count", 0),
-            "validation_attempts": state.get("validation_attempts", 0)
+        # Always include the config as configurable context
+        config_dict = {
+            "configurable": self.config.model_dump()
         }
         
-        return RunnableConfig(
-            run_name=self.langsmith_config["run_name"],
-            tags=self.langsmith_config["tags"],
-            metadata=metadata
-        )
+        # Add LangSmith metadata if enabled
+        if self.langsmith_config:
+            metadata = {
+                "subject": state.get("subject", "unknown"),
+                "subtopic": state.get("subtopic", "unknown"),
+                "question_type": state.get("question_type", "unknown"),
+                "level": state.get("level", 0),
+                "revision_count": state.get("revision_count", 0),
+                "validation_attempts": state.get("validation_attempts", 0)
+            }
+            
+            config_dict.update({
+                "run_name": self.langsmith_config["run_name"],
+                "tags": self.langsmith_config["tags"],
+                "metadata": metadata
+            })
+        
+        return RunnableConfig(**config_dict)
     
     def _build_workflow(self):
         """Build the LangGraph workflow with nodes and edges."""
@@ -147,8 +156,10 @@ class WorkflowOrchestrator:
             validation_attempts = state.get("validation_attempts", 0) + 1
             is_valid, errors = self.validation_service.validate_question(state)
             
-            # Use max_validation_attempts from config
-            max_attempts = runtime.context.max_validation_attempts
+            # Use max_validation_attempts from config or fallback to self.config
+            max_attempts = self.config.max_validation_attempts
+            if runtime.context is not None:
+                max_attempts = runtime.context.max_validation_attempts
             
             # If max attempts reached, mark as failed
             validation_failed = False
@@ -179,8 +190,10 @@ class WorkflowOrchestrator:
             validation_attempts = state.get("validation_attempts", 0)
             result = self.validation_service.validate_answer(state)
             
-            # Use max_validation_attempts from config
-            max_attempts = runtime.context.max_validation_attempts
+            # Use max_validation_attempts from config or fallback to self.config
+            max_attempts = self.config.max_validation_attempts
+            if runtime.context is not None:
+                max_attempts = runtime.context.max_validation_attempts
             
             # If max attempts reached, mark as failed
             if validation_attempts >= max_attempts and not result.get("has_answer", False):
@@ -257,8 +270,12 @@ class WorkflowOrchestrator:
             if state.get("has_answer", False) and state.get("is_validated", False):
                 return "end"
             
-            # Use max_revision_attempts from config
-            if revision_count >= runtime.context.max_revision_attempts:
+            # Use max_revision_attempts from config or fallback to self.config
+            max_attempts = self.config.max_revision_attempts
+            if runtime.context is not None:
+                max_attempts = runtime.context.max_revision_attempts
+            
+            if revision_count >= max_attempts:
                 return "end"
             
             return "revise"
@@ -299,10 +316,43 @@ class WorkflowOrchestrator:
             if "validation_errors" not in state:
                 state["validation_errors"] = []
             
+            if "generate_lesson" not in state:
+                state["generate_lesson"] = False
+            
             return state
+
+        def _generate_lesson_node(state: QuestionState, runtime: Runtime[MathGeneratorConfig]) -> QuestionState:
+            """
+            Node for generating a lesson.
+            
+            Args:
+                state: Current state
+                runtime: LangGraph runtime with access to context
+                
+            Returns:
+                Updated state with lesson content
+            """
+            lesson_data = self.lesson_service.generate_lesson(state)
+            return {**state, **lesson_data}
+
+        def _should_generate_lesson(state: QuestionState, runtime: Runtime[MathGeneratorConfig]) -> str:
+            """
+            Determine if lesson should be generated before questions.
+            
+            Args:
+                state: Current state
+                runtime: LangGraph runtime with access to context
+                
+            Returns:
+                Next edge to follow
+            """
+            if state.get("generate_lesson", False):
+                return "generate_lesson"
+            return "generate_question"
 
         # Add nodes
         self.workflow.add_node("prepare_state", _prepare_state_node)
+        self.workflow.add_node("generate_lesson", _generate_lesson_node)
         self.workflow.add_node("generate_question", _generate_question_node)
         self.workflow.add_node("validate_question", _validate_question_node)
         self.workflow.add_node("validate_answer", _validate_answer_node)
@@ -311,8 +361,18 @@ class WorkflowOrchestrator:
         # Set entry point
         self.workflow.set_entry_point("prepare_state")
 
-        # Add edge from prepare_state to generate_question
-        self.workflow.add_edge("prepare_state", "generate_question")
+        # Add conditional edge from prepare_state
+        self.workflow.add_conditional_edges(
+            "prepare_state",
+            _should_generate_lesson,
+            {
+                "generate_lesson": "generate_lesson",
+                "generate_question": "generate_question"
+            }
+        )
+        
+        # Add edge from lesson to questions
+        self.workflow.add_edge("generate_lesson", "generate_question")
         
         # Add conditional edges
         self.workflow.add_conditional_edges(
@@ -350,7 +410,7 @@ class WorkflowOrchestrator:
     def execute(self, initial_state: QuestionState) -> QuestionState:
         """
         Execute the workflow with the given initial state.
-        Includes LangSmith tracing configuration if enabled.
+        Includes config context and optional LangSmith tracing.
         
         Args:
             initial_state: Starting state for the workflow
@@ -360,9 +420,5 @@ class WorkflowOrchestrator:
         """
         run_config = self._create_run_config(initial_state)
         
-        if run_config:
-            # Execute with LangSmith tracing
-            return self.app.invoke(initial_state, config=run_config)
-        else:
-            # Execute without tracing
-            return self.app.invoke(initial_state)
+        # Execute with config context
+        return self.app.invoke(initial_state, config=run_config)
