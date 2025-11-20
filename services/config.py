@@ -160,7 +160,28 @@ INVALID: [list specific issues]
     )
     
     yes_no_instruction: str = Field(
-        default='Create a yes or no question that can be clearly answered with either Yes or No. Example: A student says: "|-7| = -7 because of the negative sign." Correct or Wrong?',
+        default=(
+            "Create a *concept-based Yes/No question* that tests a student's understanding of mathematical reasoning, "
+            "definitions, and relationships — not their ability to perform calculations.\n\n"
+            "Guidelines:\n"
+            "- Present a short statement or claim that could be true or false.\n"
+            "- The student must decide whether it is correct and justify why (mentally or in discussion).\n"
+            "- Focus on clarity, conceptual logic, and everyday mathematical reasoning.\n"
+            "- Avoid direct computation or solving equations.\n"
+            "- Keep the difficulty suitable for ages 10–16.\n\n"
+            "Examples:\n"
+            "• Algebra: 'If the product of two numbers is zero, then both numbers must be zero. Is this correct?'\n"
+            "• Algebra: 'If a quadratic equation has a negative discriminant, it has two real roots. Correct or wrong?'\n"
+            "• Geometry: 'All triangles with equal sides are also equal in all angles. True or false?'\n"
+            "• Geometry: 'If two lines have the same slope, they must be the same line. Is this correct?'\n"
+            "• Trigonometry: 'sin(θ) and cos(θ) can never be equal for any real angle θ. Is that true?'\n"
+            "• Trigonometry: 'If tan(A) = tan(B), then A must equal B. Is this statement correct?'\n"
+            "• Coordinate Geometry: 'A line parallel to the x-axis always has a slope of 0. Is that correct?'\n"
+            "• Statistics: 'The mean of a data set is always greater than the median. True or false?'\n"
+            "• Probability: 'If two events are independent, they cannot happen at the same time. Is this correct?'\n"
+            "• Arithmetic: 'Dividing a number by a fraction greater than 1 makes it smaller. Correct or wrong?'\n\n"
+            "Make sure each question has a clear Yes/No (or Correct/Wrong) answer that depends on the student's conceptual understanding."
+        ),
         description="Instruction for generating Yes/No questions",
         json_schema_extra={
             "langgraph_nodes": ["generate_question"],
