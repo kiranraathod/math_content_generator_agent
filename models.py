@@ -20,6 +20,7 @@ class InputState(TypedDict):
     subtopic: str
     question_type: str
     level: int
+    generate_lesson: Optional[bool]
 
 
 class OutputState(TypedDict):
@@ -34,6 +35,13 @@ class OutputState(TypedDict):
     # MCQ-specific fields (optional)
     options: Optional[List[str]]
     correct_option: Optional[str]
+    # Lesson fields (optional)
+    lesson_title: Optional[str]
+    lesson_introduction: Optional[str]
+    real_world_example: Optional[str]
+    key_concepts: Optional[List[str]]
+    definitions: Optional[str]
+    practice_tips: Optional[str]
 
 
 class QuestionState(InputState, OutputState, total=False):
@@ -48,6 +56,7 @@ class QuestionState(InputState, OutputState, total=False):
         question_type: Type of question ("MCQ", "Fill-in-the-Blank", "Yes/No")
         level: Difficulty level (1-6, where 1 is Foundation and 6 is Master Challenge)
         use_examples: Whether to fetch and include database examples in prompt
+        generate_lesson: Whether to generate a lesson (NEW)
         
         # Output fields (from OutputState)
         question: The generated question text
@@ -57,6 +66,14 @@ class QuestionState(InputState, OutputState, total=False):
         validation_failed: Whether question failed validation after max attempts
         options: List of 4 multiple choice options (for MCQ type only)
         correct_option: The correct option letter A, B, C, or D (for MCQ type only)
+        
+        # Lesson fields (NEW)
+        lesson_title: Title of the generated lesson
+        lesson_introduction: Introduction to the lesson
+        real_world_example: Real-world example with emojis
+        key_concepts: List of key concepts
+        definitions: Important definitions
+        practice_tips: Tips for mastering the topic
         
         # Internal processing fields
         validation_errors: List of validation errors (accumulated)
@@ -77,3 +94,12 @@ class QuestionState(InputState, OutputState, total=False):
     # MCQ-specific fields (optional)
     options: List[str]
     correct_option: str
+    
+    # Lesson fields (optional)
+    generate_lesson: bool
+    lesson_title: str
+    lesson_introduction: str
+    real_world_example: str
+    key_concepts: List[str]
+    definitions: str
+    practice_tips: str

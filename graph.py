@@ -6,7 +6,7 @@ Factory function for creating the math content generator graph.
 import os
 from typing import Optional
 from models import QuestionState, InputState, OutputState
-from services import QuestionService, ValidationService, LLMService
+from services import QuestionService, ValidationService, LLMService, LessonService
 from services.config import MathGeneratorConfig
 from workflow import WorkflowOrchestrator
 
@@ -46,11 +46,16 @@ def create_graph(config: Optional[MathGeneratorConfig] = None):
         llm_service=llm_service,
         config=config
     )
+    lesson_service = LessonService(
+        llm_service=llm_service,
+        config=config
+    )
     
     # Create workflow orchestrator
     orchestrator = WorkflowOrchestrator(
         question_service=question_service,
         validation_service=validation_service,
+        lesson_service=lesson_service,
         config=config
     )
     
