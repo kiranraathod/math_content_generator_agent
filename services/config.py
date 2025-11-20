@@ -1,9 +1,6 @@
 """
 Configuration Schema for Math Content Generator
 Enables LangGraph Studio integration for visual prompt editing.
-
-This configuration uses Pydantic with json_schema_extra annotations to make
-prompts editable directly in LangGraph Studio's UI without code changes.
 """
 
 from pydantic import BaseModel, Field
@@ -12,15 +9,9 @@ from pydantic import BaseModel, Field
 class MathGeneratorConfig(BaseModel):
     """
     Configuration for the Math Content Generator with LangGraph Studio integration.
-    
-    All prompt fields are editable in LangGraph Studio through the graph UI.
-    The json_schema_extra metadata links prompts to specific workflow nodes.
     """
     
-    # =========================================================================
     # GENERATION PROMPTS
-    # =========================================================================
-    
     generation_system_prompt: str = Field(
         default="You are an expert math teacher creating educational content for 14-18 students.",
         description="System prompt for question generation node",
@@ -46,26 +37,14 @@ Your response will be automatically parsed as JSON. Provide:
 - difficulty_justification: Brief explanation of why this matches level {level} difficulty
 - question_type_confirmation: "{question_type}"
 """,
-        description="""Template for generating math questions.
-        
-Variables:
-- question_type: Type of question (MCQ, Fill-in-the-Blank, Yes/No)
-- subject: Subject area (e.g., Mathematics, Physics)
-- subtopic: Specific subtopic (e.g., Linear Equations, Quadratic Functions)
-- level: Difficulty level (1-5)
-- type_specific_instruction: Instructions specific to question type
-- examples_text: Optional example questions from database
-- mcq_answer_note: Additional instructions for MCQ answers""",
+        description="Template for generating math questions",
         json_schema_extra={
             "langgraph_nodes": ["generate_question"],
             "langgraph_type": "prompt"
         }
     )
     
-    # =========================================================================
     # REVISION PROMPTS
-    # =========================================================================
-    
     revision_system_prompt: str = Field(
         default="You are an expert at improving educational content based on feedback.",
         description="System prompt for question revision node",
@@ -102,28 +81,14 @@ Your response will be automatically parsed as JSON. Provide:
 - difficulty_justification: Why this matches level {level}
 - question_type_confirmation: "{question_type}"
 """,
-        description="""Template for revising questions based on validation feedback.
-        
-Variables:
-- question_type: Type of question being revised
-- error_text: Validation errors that need to be addressed
-- question: Original question text
-- solution: Original solution
-- answer: Original answer
-- subject: Subject area
-- subtopic: Specific subtopic
-- level: Difficulty level
-- mcq_note: Additional MCQ-specific instructions""",
+        description="Template for revising questions",
         json_schema_extra={
             "langgraph_nodes": ["revise_question"],
             "langgraph_type": "prompt"
         }
     )
     
-    # =========================================================================
     # VALIDATION PROMPTS
-    # =========================================================================
-    
     question_validation_template: str = Field(
         default="""Validate this math question for clarity and completeness:
 
@@ -137,19 +102,12 @@ Check if:
 4. The mathematical notation is correct
 {mcq_options_check}
 
-NOTE: For MCQ questions, the options are stored separately and have been included above.
-
 Respond with either:
 VALID
 or
 INVALID: [list specific issues]
 """,
-        description="""Template for validating question quality.
-        
-Variables:
-- question_type: Type of question being validated
-- question_text: Complete question text (includes MCQ options if applicable)
-- mcq_options_check: Additional validation rule for MCQ (checking 4 options A-D)""",
+        description="Template for validating question quality",
         json_schema_extra={
             "langgraph_nodes": ["validate_question"],
             "langgraph_type": "prompt"
@@ -175,23 +133,14 @@ VALID
 or
 INVALID: [list specific issues]
 """,
-        description="""Template for validating answer correctness.
-        
-Variables:
-- question_type: Type of question
-- question_text: Complete question text
-- additional_context: MCQ options and correct option if applicable
-- answer: Answer to validate""",
+        description="Template for validating answer correctness",
         json_schema_extra={
             "langgraph_nodes": ["validate_answer"],
             "langgraph_type": "prompt"
         }
     )
     
-    # =========================================================================
     # QUESTION TYPE INSTRUCTIONS
-    # =========================================================================
-    
     mcq_instruction: str = Field(
         default="Create a multiple choice question with 4 options (A, B, C, D). Mark the correct answer clearly.",
         description="Instruction for generating MCQ questions",
@@ -202,7 +151,7 @@ Variables:
     )
     
     fill_in_blank_instruction: str = Field(
-        default="Create a fill-in-the-blank question with each blank marked with a question mark (?). Example: Fill in the Blank Solve |x - 5| = 8 → x = ? or ?.",
+        default="Create a fill-in-the-blank question with each blank marked with a question mark (?). Example: Fill in the Blank Solve |x - 5| = 8 -> x = ? or ?.",
         description="Instruction for generating Fill-in-the-Blank questions",
         json_schema_extra={
             "langgraph_nodes": ["generate_question"],
@@ -219,15 +168,12 @@ Variables:
         }
     )
     
-    # =========================================================================
-    # =========================================================================
-    # LESSON GENERATION PROMPTS
-    # =========================================================================
-    
+    # LESSON GENERATION PROMPTS (REFINED FOR AGES 10-16)
     lesson_generation_system_prompt: str = Field(
-        default="""You are a friendly, engaging math teacher who makes learning fun and relatable. 
-You use emojis, real-world examples, and conversational language to help students understand concepts.
-Your teaching style is warm, encouraging, and uses visual elements (emojis, arrows, etc.) to make content memorable.""",
+        default="""You are a fun, supportive math teacher creating short, exciting lessons for students aged 10-16.
+Use SIMPLE words, SHORT sentences, and examples kids relate to (games, sports, snacks, social media, video streaming).
+Think: How would I explain this to a middle schooler? Keep it super friendly and encouraging!
+Use 1-2 emojis per sentence MAX. Make math feel like a cool secret they're learning.""",
         description="System prompt for lesson generation node",
         json_schema_extra={
             "langgraph_nodes": ["generate_lesson"],
@@ -236,108 +182,80 @@ Your teaching style is warm, encouraging, and uses visual elements (emojis, arro
     )
     
     lesson_generation_template: str = Field(
-        default="""Create an engaging, friendly math lesson for students aged 14-18.
+        default="""Create a SHORT, FUN math lesson for students aged 10-16.
 
 Subject: {subject}
 Subtopic: {subtopic}
 Difficulty Level: {level}
 
-LESSON STRUCTURE:
-1. **Catchy Title**: Make it inviting and clear
-2. **Introduction**: Hook the student with why this matters
-3. **Real-World Example**: 
-   - Use a relatable scenario (concerts, shopping, sports, social media)
-   - Include emojis (🎟️, 🌭, ⚽, 📱)
-   - Show how the math concept appears naturally
-   - Break down components step by step
-4. **Key Concepts**: 3-5 main ideas with:
-   - Clear, simple language
-   - Visual markers (👉, 📌, ⚡)
-   - Examples in explanations
-5. **Definitions**: Define terms with examples
-6. **Practice Tips**: Encouraging advice for mastering the topic
-
-TONE: Conversational, friendly, use "you", include emojis, explain "why" not just "what"
-
-EXAMPLE STYLE:
-"Imagine: Concert ticket costs $50. 🎟️ = 50
-Snacks cost $3 each. 🌭 = 3
-Total: 50 + 3x (where x = snacks)
-👉 50 is a constant (never changes)
-👉 3 is the coefficient (multiplies variable)
-👉 x is the variable (can change)"
-
-Your response will be parsed as JSON. Provide:
-- lesson_title: Catchy, clear title
-- lesson_introduction: Engaging hook
-- real_world_example: Full scenario with emojis
-- key_concepts: Array of 3-5 explanations
-- definitions: Clear definitions with examples
-- practice_tips: Helpful study advice
-""",
-        description="Template for generating friendly math lessons",
-        json_schema_extra={
-            "langgraph_nodes": ["generate_lesson"],
-            "langgraph_type": "prompt"
-        }
-    )
-    
-    # =========================================================================
-    # LESSON GENERATION PROMPTS
-    # =========================================================================
-    
-    lesson_generation_system_prompt: str = Field(
-        default="""You are a friendly, engaging math teacher who makes learning fun and relatable. 
-You use emojis, real-world examples, and conversational language to help students understand concepts.
-Your teaching style is warm, encouraging, and uses visual elements (emojis, arrows, etc.) to make content memorable.""",
-        description="System prompt for lesson generation node",
-        json_schema_extra={
-            "langgraph_nodes": ["generate_lesson"],
-            "langgraph_type": "prompt"
-        }
-    )
-    
-    lesson_generation_template: str = Field(
-        default="""Create an engaging, friendly math lesson for students aged 14-18.
-
-Subject: {subject}
-Subtopic: {subtopic}
-Difficulty Level: {level}
+SUPER IMPORTANT: Use SIMPLE words and SHORT sentences (max 2-3 sentences per section). Kids aged 10-16 should easily understand every word!
 
 LESSON STRUCTURE:
-1. **Catchy Title**: Make it inviting and clear
-2. **Introduction**: Hook the student with why this matters
-3. **Real-World Example**: 
-   - Use a relatable scenario (concerts, shopping, sports, social media)
-   - Include emojis (🎟️, 🌭, ⚽, 📱)
-   - Show how the math concept appears naturally
-   - Break down components step by step
-4. **Key Concepts**: 3-5 main ideas with:
-   - Clear, simple language
-   - Visual markers (👉, 📌, ⚡)
-   - Examples in explanations
-5. **Definitions**: Define terms with examples
-6. **Practice Tips**: Encouraging advice for mastering the topic
 
-TONE: Conversational, friendly, use "you", include emojis, explain "why" not just "what"
+SECTION 1 - INTRODUCTION (lesson_introduction):
+Write 2-3 SHORT sentences with a fun scenario kids can relate to.
+Use examples like: video games, sports scores, snacks, allowance, streaming subscriptions, workout reps, TikTok followers.
+Format: "Imagine this situation: [fun scenario with 1 emoji]! [How it connects to math]. This is exactly what we do when we [topic]!"
 
-EXAMPLE STYLE:
-"Imagine: Concert ticket costs $50. 🎟️ = 50
-Snacks cost $3 each. 🌭 = 3
-Total: 50 + 3x (where x = snacks)
-👉 50 is a constant (never changes)
-👉 3 is the coefficient (multiplies variable)
-👉 x is the variable (can change)"
+GOOD Example: "Imagine this situation: You're tracking your workout progress! You start with some reps, add 5 more, then decide to do double that amount. How do you keep track? This is exactly what we do when we write variable expressions!"
+
+BAD Example (too complex): "Consider a hypothetical scenario wherein one is monitoring their physical exercise regimen..."
+
+SECTION 2 - REAL-WORLD EXAMPLE (real_world_example):
+Write 3-4 SHORT sentences with concrete examples using arrows.
+Format: "Let's see some examples: [Example 1 with emoji and arrow]. [Example 2]. [Where variables help]. [lightbulb emoji] [Simple explanation]!"
+
+GOOD Example: "Let's see some examples: If you start with 10 push-ups and do 5 more -> you have 10 + 5 push-ups. What if you don't know how many you started with? That's where variables come in! We use letters like 'x' or 'r' to represent an unknown number. So, 'r' reps + 5 more = 'r + 5'! Using a variable helps us describe a situation even when we don't know the exact number yet!"
+
+Keep it: Simple words, clear pattern, relatable examples.
+
+SECTION 3 - KEY CONCEPTS (key_concepts as array of 3 strings):
+Write exactly 3 mini-lessons. Each should be 2-3 SHORT sentences. Use simple words and fun examples.
+
+Concept 1: "Let's translate words into math! (pencil emoji) 'A number increased by ten' is 'x + 10'. 'Six less than a number' means 'n - 6' (careful, not '6 - n'!). 'The product of a number and four' is '4y'. 'A number divided by three' is 'z / 3'."
+
+Concept 2: "What if things get more interesting? Say you have 'three more than twice a number'. First, 'twice a number' is '2x'. Then, 'three more than that' is '2x + 3'. (checkmark) You got it! Another one: 'The difference of a number and 7, multiplied by 2'. This means '(n - 7) * 2' or '2(n - 7)'. (checkmark) Awesome!"
+
+Concept 3: "Now, let's express real-world costs! Imagine a taxi ride (taxi emoji) that costs 3 plus 2 for every mile driven. How do you write the expression for the total cost? Let 'm' be the number of miles. The cost per mile is '2 * m'. So, the total cost would be: '3 + 2m'. See how we used variables and operations to model the cost? So cool! (sunglasses emoji)"
+
+Keep language SIMPLE. Avoid big words. Use examples kids understand (games, rides, snacks, not mortgages or taxes).
+
+SECTION 4 - DEFINITIONS (definitions):
+Write 4-5 key terms. Each gets 1-2 SHORT sentences with a simple example.
+Format: "(emoji) Term: [Simple definition]. Example: [Clear example]."
+
+GOOD Example: "(hand pointing) Variable: A symbol (like x, y, a) that stands for an unknown or changing number. Example: In 'y - 7', 'y' is the variable. (pushpin) Expression: A math phrase with numbers, variables, and operations, but no equals sign. Example: '5x + 2' is an expression. (1234) Coefficient: The number multiplied by a variable. Example: In '3m', '3' is the coefficient. (explosion) Constant: A number in an expression that never changes its value. Example: In '3m + 8', '8' is the constant."
+
+Use SIMPLE definitions. No fancy words like "placeholder" or "mathematical phrase" unless explained simply.
+
+SECTION 5 - PRACTICE TIPS (practice_tips):
+Write a summary with 3-5 tips. Use emojis and keep language simple and encouraging.
+Format: "Summary: (emoji) [Tip 1]. (emoji) [Tip 2]. (emoji) [Tip 3]. [Encouraging close]!"
+
+GOOD Example: "Summary: (magnifying glass) Keywords are key! Look for words like 'sum' (+), 'difference' (-), 'product' (x), 'quotient' (/). (warning triangle) Order matters for subtraction and division! 'Less than' often flips the order (e.g., '8 less than x' is 'x - 8'). parentheses Parentheses are your friends! Use them for phrases like 'the sum of...' or 'twice the difference...' to group terms correctly. (lightbulb) Read carefully and break it down! Tackle complex phrases piece by piece. You've got this! Practice translating those tricky word problems into neat algebraic expressions, and you'll be an algebra star in no time! (star)"
+
+Keep it motivating and simple!
+
+FORMATTING RULES FOR AGES 10-16:
+- Use SIMPLE, everyday words (not "hypothetical", "wherein", "subsequently")
+- MAX 2-3 sentences per paragraph
+- Examples kids relate to: sports, games, snacks, allowance, phones, streaming
+- Use emojis IN sentences (1-2 max per sentence)
+- Arrows (->) for showing steps
+- (checkmark), (rocket), (lightbulb) as markers
+- Friendly tone: "Let's...", "You...", "So..."
+- NO long paragraphs
+- Explain math clearly but keep it FUN
 
 Your response will be parsed as JSON. Provide:
-- lesson_title: Catchy, clear title
-- lesson_introduction: Engaging hook
-- real_world_example: Full scenario with emojis
-- key_concepts: Array of 3-5 explanations
-- definitions: Clear definitions with examples
-- practice_tips: Helpful study advice
+- lesson_title: Fun title with one emoji (e.g., "Algebra Unlocked: Writing Expressions! (key emoji)")
+- lesson_introduction: 2-3 SHORT sentences (Fun scenario)
+- real_world_example: 3-4 SHORT sentences (Examples kids understand)
+- key_concepts: Array of 3 strings, each 2-3 SHORT sentences (Progressive but simple)
+- definitions: 4-5 definitions with simple words and clear examples
+- practice_tips: Summary with 3-5 tips, motivating close
 """,
-        description="Template for generating friendly math lessons",
+        description="Template for generating lessons for ages 10-16",
         json_schema_extra={
             "langgraph_nodes": ["generate_lesson"],
             "langgraph_type": "prompt"
@@ -345,11 +263,9 @@ Your response will be parsed as JSON. Provide:
     )
     
     # MODEL CONFIGURATION
-    # =========================================================================
-    
     llm_model: str = Field(
         default="gemini-2.5-flash",
-        description="LLM model for content generation and validation (e.g., gemini-2.5-flash, gemini-1.5-flash, gemini-1.5-pro)",
+        description="LLM model for content generation",
         json_schema_extra={
             "langgraph_nodes": ["generate_question", "revise_question", "validate_question", "validate_answer"]
         }
@@ -359,21 +275,18 @@ Your response will be parsed as JSON. Provide:
         default=0.7,
         ge=0.0,
         le=2.0,
-        description="Temperature for LLM generation (0.0-2.0). Higher values increase creativity.",
+        description="Temperature for LLM generation (0.0-2.0)",
         json_schema_extra={
             "langgraph_nodes": ["generate_question", "revise_question"]
         }
     )
     
-    # =========================================================================
     # WORKFLOW PARAMETERS
-    # =========================================================================
-    
     max_revision_attempts: int = Field(
         default=3,
         ge=1,
         le=10,
-        description="Maximum number of revision attempts before accepting question",
+        description="Maximum number of revision attempts",
         json_schema_extra={
             "langgraph_nodes": ["revise_question"]
         }
@@ -383,7 +296,7 @@ Your response will be parsed as JSON. Provide:
         default=2,
         ge=1,
         le=5,
-        description="Maximum number of validation attempts before marking as failed",
+        description="Maximum number of validation attempts",
         json_schema_extra={
             "langgraph_nodes": ["validate_question", "validate_answer"]
         }
@@ -401,26 +314,15 @@ Your response will be parsed as JSON. Provide:
         default=2,
         ge=0,
         le=5,
-        description="Maximum number of example questions to include when use_examples is True",
+        description="Maximum number of example questions to include",
         json_schema_extra={
             "langgraph_nodes": ["generate_question"]
         }
     )
     
-    # =========================================================================
     # HELPER METHODS
-    # =========================================================================
-    
     def get_question_type_instruction(self, question_type: str) -> str:
-        """
-        Get the instruction text for a specific question type.
-        
-        Args:
-            question_type: One of 'MCQ', 'Fill-in-the-Blank', 'Yes/No'
-            
-        Returns:
-            Instruction text for the question type
-        """
+        """Get the instruction text for a specific question type."""
         instructions = {
             "MCQ": self.mcq_instruction,
             "Fill-in-the-Blank": self.fill_in_blank_instruction,

@@ -52,7 +52,7 @@ class QuestionService:
         self.question_type_prompts = {
             "MCQ": "Create a multiple choice question with 4 options (A, B, C, D). Mark the correct answer clearly.",
             "Fill-in-the-Blank": "Create a fill-in-the-blank question with each blank marked with a question mark (?). Example: Fill in the Blank Solve |x - 5| = 8 → x = ? or ?.",
-            "Yes/No": "Create a yes or no question that can be clearly answered with either Yes or No. Example : A student says: \"|-7| = -7 because of the negative sign.\" Correct or Wrong?"
+            "Yes/No": "Focus on conceptual understanding rather than computation; each Yes/No question must evaluate reasoning, definitions, or properties — not step-by-step solving."
         }
         self.level_definitions = LEVELS
     
