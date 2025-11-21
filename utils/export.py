@@ -3,7 +3,7 @@ Export utilities for saving generated questions.
 Handles JSON export functionality.
 """
 import json
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 
 class ExportService:
@@ -53,23 +53,29 @@ class ExportService:
         answer: str,
         question_type: str,
         level: int = 1,
-        prompt: str = ""
+        prompt: str = "",
+        options: Optional[List[str]] = None,
+        correct_option: Optional[str] = None
     ) -> Dict:
         """
         Format a question into a standardized dictionary for export.
         
         Args:
             subject: Subject area
+            subtopic: Specific subtopic
             question: Question text
             solution: Solution steps
             answer: Final answer
             question_type: Type of question
             level: Difficulty level (1-6)
+            prompt: The prompt used to generate this question
+            options: List of MCQ options (A, B, C, D) - only for MCQ type
+            correct_option: The correct option letter (A, B, C, or D) - only for MCQ type
             
         Returns:
             Formatted question dictionary
         """
-        return {
+        result = {
             "subject": subject,
             "subtopic": subtopic,
             "question": question,
@@ -79,3 +85,10 @@ class ExportService:
             "level": level,
             "prompt": prompt
         }
+        
+        # Add MCQ-specific fields if provided
+        if question_type == "MCQ" and options:
+            result["options"] = options
+            result["correct_option"] = correct_option
+        
+        return result
