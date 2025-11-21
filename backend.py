@@ -118,7 +118,9 @@ class MathQuestionGenerator:
             answer=result.get("answer", ""),
             question_type=result.get("question_type", question_type),
             level=result.get("level", level),
-            prompt=result.get("prompt", "")
+            prompt=result.get("prompt", ""),
+            options=result.get("options"),
+            correct_option=result.get("correct_option")
         )
         
         # Add lesson fields if lesson was generated

@@ -50,9 +50,37 @@ class QuestionService:
         from utils.LEVEL_DEFINITIONS import LEVELS
         
         self.question_type_prompts = {
-            "MCQ": "Create a multiple choice question with 4 options (A, B, C, D). Mark the correct answer clearly.",
+            "MCQ": (
+                "Create a multiple choice question with EXACTLY 4 options labeled A, B, C, and D.\n\n"
+                "CRITICAL REQUIREMENTS:\n"
+                "1. You MUST provide all 4 options (A, B, C, D) - not just the correct answer\n"
+                "2. Each option must be clearly labeled with its letter (A, B, C, or D)\n"
+                "3. Only ONE option should be correct\n"
+                "4. The other 3 options should be carefully designed distractors based on common student errors\n\n"
+                "DISTRACTOR DESIGN PRINCIPLES:\n"
+                "- Use common misconceptions (e.g., sign errors, order of operations mistakes)\n"
+                "- Include computational errors students typically make\n"
+                "- Add conceptually plausible but incorrect answers\n"
+                "- Make distractors reasonable enough to be tempting, not obviously wrong\n\n"
+                "OUTPUT FORMAT:\n"
+                "- options: Array of exactly 4 strings, each starting with letter and parenthesis\n"
+                "  Example: ['A) -25', 'B) -1/25', 'C) 1/25', 'D) 25']\n"
+                "- correct_option: Single letter indicating correct answer (A, B, C, or D)\n"
+                "- answer: The correct answer value/expression only\n\n"
+                "Remember: ALL 4 OPTIONS MUST BE PROVIDED. Never generate an MCQ with missing options!"
+            ),
             "Fill-in-the-Blank": "Create a fill-in-the-blank question with each blank marked with a question mark (?). Example: Fill in the Blank Solve |x - 5| = 8 → x = ? or ?.",
-            "Yes/No": "Focus on conceptual understanding rather than computation; each Yes/No question must evaluate reasoning, definitions, or properties — not step-by-step solving."
+            "Yes/No": (
+                "Create a *concept-based Yes/No question* that tests a student's understanding of mathematical reasoning, "
+                "definitions, and relationships — not their ability to perform calculations.\n\n"
+                "Guidelines:\n"
+                "- Present a short statement or claim that could be true or false.\n"
+                "- The student must decide whether it is correct and justify why (mentally or in discussion).\n"
+                "- Focus on clarity, conceptual logic, and everyday mathematical reasoning.\n"
+                "- Avoid direct computation or solving equations.\n"
+                "- Keep the difficulty suitable for ages 10–16.\n\n"
+                "Make sure each question has a clear Yes/No (or Correct/Wrong) answer that depends on the student's conceptual understanding."
+            )
         }
         self.level_definitions = LEVELS
     

@@ -13,7 +13,7 @@ class MathGeneratorConfig(BaseModel):
     
     # GENERATION PROMPTS
     generation_system_prompt: str = Field(
-        default="You are an expert math teacher creating educational content for 14-18 students.",
+        default="You are an expert math teacher creating educational content for 10-16 students.",
         description="System prompt for question generation node",
         json_schema_extra={
             "langgraph_nodes": ["generate_question"],
@@ -142,8 +142,46 @@ INVALID: [list specific issues]
     
     # QUESTION TYPE INSTRUCTIONS
     mcq_instruction: str = Field(
-        default="Create a multiple choice question with 4 options (A, B, C, D). Mark the correct answer clearly.",
-        description="Instruction for generating MCQ questions",
+        default=(
+            "Create a multiple choice question with EXACTLY 4 options labeled A, B, C, and D.\n\n"
+            "CRITICAL REQUIREMENTS:\n"
+            "1. You MUST provide all 4 options (A, B, C, D) - not just the correct answer\n"
+            "2. Each option must be clearly labeled with its letter (A, B, C, or D)\n"
+            "3. Only ONE option should be correct\n"
+            "4. The other 3 options should be carefully designed distractors based on common student errors\n\n"
+            "DISTRACTOR DESIGN PRINCIPLES:\n"
+            "- Use common misconceptions (e.g., sign errors, order of operations mistakes)\n"
+            "- Include computational errors students typically make\n"
+            "- Add conceptually plausible but incorrect answers\n"
+            "- Make distractors reasonable enough to be tempting, not obviously wrong\n\n"
+            "EXAMPLES OF GOOD MCQ FORMAT:\n\n"
+            "Example 1 - Negative Exponents:\n"
+            "Question: What is the simplified form of 5⁻²?\n"
+            "A) -25 (misconception: applying negative to result)\n"
+            "B) -1/25 (misconception: negative fraction)\n"
+            "C) 1/25 ✓ (CORRECT: applying a⁻ⁿ = 1/aⁿ rule)\n"
+            "D) 25 (misconception: ignoring the negative exponent)\n\n"
+            "Example 2 - Solving Equations:\n"
+            "Question: Solve for x: 2x + 5 = 13\n"
+            "A) x = 3 (error: (13-5)/2 miscalculation)\n"
+            "B) x = 4 ✓ (CORRECT: (13-5)/2 = 4)\n"
+            "C) x = 9 (error: forgot to divide by 2)\n"
+            "D) x = 18 (error: multiplied instead of divided)\n\n"
+            "Example 3 - Geometry:\n"
+            "Question: What is the area of a triangle with base 8 cm and height 6 cm?\n"
+            "A) 14 cm² (error: added base + height)\n"
+            "B) 24 cm² ✓ (CORRECT: ½ × 8 × 6)\n"
+            "C) 48 cm² (error: forgot to multiply by ½)\n"
+            "D) 28 cm² (error: perimeter thinking)\n\n"
+            "OUTPUT FORMAT:\n"
+            "When generating your response, include:\n"
+            "- options: Array of exactly 4 strings, each starting with letter and parenthesis\n"
+            "  Example: ['A) -25', 'B) -1/25', 'C) 1/25', 'D) 25']\n"
+            "- correct_option: Single letter indicating correct answer (A, B, C, or D)\n"
+            "- answer: The correct answer value/expression only\n\n"
+            "Remember: ALL 4 OPTIONS MUST BE PROVIDED. Never generate an MCQ with missing options!"
+        ),
+        description="Instruction for generating MCQ questions with all 4 options",
         json_schema_extra={
             "langgraph_nodes": ["generate_question"],
             "langgraph_type": "prompt"

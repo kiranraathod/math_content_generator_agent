@@ -414,6 +414,20 @@ if st.session_state.generated_questions:
             st.markdown("**Question:**")
             st.write(question.get('question', 'N/A'))
             
+            # Display MCQ options if available
+            if question.get('type') == 'MCQ' and question.get('options'):
+                st.markdown("**Options:**")
+                options = question.get('options', [])
+                correct_option = question.get('correct_option', '')
+                
+                for option in options:
+                    # Check if this is the correct option
+                    option_letter = option[0] if option else ''
+                    if option_letter == correct_option:
+                        st.markdown(f"**{option}**")
+                    else:
+                        st.markdown(f" {option}")
+            
             st.markdown("**Solution:**")
             st.write(question.get('solution', 'N/A'))
             
