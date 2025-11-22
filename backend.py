@@ -5,7 +5,7 @@ Following SOLID principles with separated concerns.
 """
 import os
 import json
-from typing import List
+from typing import List, Optional
 
 from models import QuestionState
 from services import LLMService, QuestionService, ValidationService, LessonService
@@ -63,7 +63,8 @@ class MathQuestionGenerator:
         question_type: str,
         level: int = 1,
         use_examples: bool = False,
-        generate_lesson: bool = False
+        generate_lesson: bool = False,
+        previous_questions: Optional[List[str]] = None
     ) -> dict:
         """
         Generate a single math question.
@@ -75,6 +76,7 @@ class MathQuestionGenerator:
             level: Difficulty level (1-6, default: 1)
             use_examples: Whether to fetch and include database examples (default: False)
             generate_lesson: Whether to generate a lesson before the question (default: False)
+            previous_questions: List of previously generated question texts for batch diversity (default: None)
             
         Returns:
             Dictionary containing the generated question, solution, and answer (and lesson if requested)
@@ -95,7 +97,8 @@ class MathQuestionGenerator:
             validation_failed=False,
             use_examples=use_examples,
             generate_lesson=generate_lesson,
-            prompt=""
+            prompt="",
+            previous_questions=previous_questions or []
         )
         
         result = self.workflow.execute(initial_state)
@@ -161,6 +164,7 @@ class MathQuestionGenerator:
             List of generated question dictionaries (lesson included in first question if generated)
         """
         questions = []
+        previous_question_texts = []  # Track previously generated question texts for diversity
         total_questions = sum(question_distribution.values())
         current = 0
         lesson_generated = False
@@ -179,19 +183,27 @@ class MathQuestionGenerator:
                     gen_lesson = generate_lesson and not lesson_generated
                     
                     print(f"Generating {'lesson + ' if gen_lesson else ''}question {current}/{total_questions} ({question_type}, Level {level})...")
+                    
+                    # Pass previous questions for diversity
                     question = self.generate_question(
                         subject=subject,
                         subtopic=subtopic,
                         question_type=question_type,
                         level=level,
                         use_examples=use_examples,
-                        generate_lesson=gen_lesson
+                        generate_lesson=gen_lesson,
+                        previous_questions=previous_question_texts
                     )
                     
                     if gen_lesson:
                         lesson_generated = True
                     
                     questions.append(question)
+                    
+                    # Add the generated question text to history for next iteration
+                    if question.get('question'):
+                        previous_question_texts.append(question['question'])
+                    
                     print(f"✓ Successfully generated {'lesson + ' if gen_lesson else ''}question {current}")
                 except ValueError as e:
                     # Validation failure - skip this question
