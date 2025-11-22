@@ -29,6 +29,7 @@ Level: {level} (level_{level})
 
 {type_specific_instruction}
 {examples_text}
+{previous_questions_instruction}
 
 Your response will be automatically parsed as JSON. Provide:
 - question: The complete question text, clearly stated

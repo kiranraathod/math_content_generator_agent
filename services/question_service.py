@@ -2,7 +2,7 @@
 Question Service - Handles question generation logic.
 Responsible for creating prompts and parsing LLM responses.
 """
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from langchain_core.messages import HumanMessage, SystemMessage
 from models import QuestionState
 from services.llm_service import LLMService
@@ -68,6 +68,9 @@ class QuestionService:
         if question_type == "MCQ":
             mcq_answer_note = "\n- For MCQ: answer field must include the correct option letter (e.g., 'C) x = 5' or 'Option C: x = 5')"
         
+        # Format previous questions instruction for batch diversity
+        previous_questions_instruction = self._format_previous_questions(state)
+        
         # Format generation template from config
         prompt = self.config.generation_template.format(
             question_type=question_type,
@@ -76,7 +79,8 @@ class QuestionService:
             level=level,
             type_specific_instruction=type_specific_instruction,
             examples_text=examples_text,
-            mcq_answer_note=mcq_answer_note
+            mcq_answer_note=mcq_answer_note,
+            previous_questions_instruction=previous_questions_instruction
         )
         
         # Use system prompt from config
@@ -175,6 +179,39 @@ class QuestionService:
         print("Question revised successfully")
         
         return {**state, **revised}
+    
+    def _format_previous_questions(self, state: QuestionState) -> str:
+        """
+        Format previous questions into a prompt instruction to ensure diversity.
+        
+        Args:
+            state: Current question state containing previous_questions list
+            
+        Returns:
+            Formatted instruction string or empty string if no previous questions
+        """
+        previous_questions: List[str] = state.get('previous_questions', [])
+        
+        if not previous_questions:
+            return ""
+        
+        # Limit to last 10 questions to avoid prompt bloat
+        recent_questions = previous_questions[-10:]
+        
+        # Format the instruction
+        questions_list = "\n".join(f"- {q}" for q in recent_questions)
+        
+        instruction = (
+            "\n\nIMPORTANT - DO NOT REPEAT THESE PREVIOUSLY GENERATED QUESTIONS:\n"
+            f"{questions_list}\n\n"
+            "Create a COMPLETELY DIFFERENT problem with:\n"
+            "- Different numbers and values\n"
+            "- Different variable names (if applicable)\n"
+            "- Different context or scenario\n"
+            "- Different mathematical structure where possible\n"
+        )
+        
+        return instruction
     
     def _fetch_examples(self, state: QuestionState) -> str:
         """

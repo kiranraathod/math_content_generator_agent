@@ -21,6 +21,7 @@ class InputState(TypedDict):
     question_type: str
     level: int
     generate_lesson: Optional[bool]
+    previous_questions: Optional[List[str]]  # For batch diversity - tracks previously generated questions
 
 
 class OutputState(TypedDict):
@@ -57,6 +58,7 @@ class QuestionState(InputState, OutputState, total=False):
         level: Difficulty level (1-6, where 1 is Foundation and 6 is Master Challenge)
         use_examples: Whether to fetch and include database examples in prompt
         generate_lesson: Whether to generate a lesson (NEW)
+        previous_questions: List of previously generated question texts (for batch diversity)
         
         # Output fields (from OutputState)
         question: The generated question text
@@ -90,6 +92,7 @@ class QuestionState(InputState, OutputState, total=False):
     validation_failed: bool
     use_examples: bool
     prompt: str
+    previous_questions: List[str]
     
     # MCQ-specific fields (optional)
     options: List[str]
