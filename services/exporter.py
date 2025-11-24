@@ -71,6 +71,8 @@ class ContentPackageExporter:
             "question": q.question_text,
             "solution": q.solution,
             "answer": q.answer,
+            "subject": q.subject,
+            "subtopic": q.subtopic,
             "type": q.question_type.value,
             "options": q.options,
             "correct_option": q.correct_option,
