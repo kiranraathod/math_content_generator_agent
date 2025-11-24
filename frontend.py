@@ -18,7 +18,7 @@ def escape_markdown(text: str) -> str:
     """
     if not text:
         return ""
-    return str(text).replace("$", "\$") 
+    return str(text).replace("$", "&#36;") 
 
 # --- Page Configuration ---
 st.set_page_config(

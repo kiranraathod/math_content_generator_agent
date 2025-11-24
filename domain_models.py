@@ -90,6 +90,8 @@ class GeneratedQuestion(BaseModel):
     question_text: str
     solution: str
     answer: str
+    subject: str = Field(..., description="Subject of the question")
+    subtopic: str = Field(..., description="Subtopic of the question")
     question_type: QuestionType = Field(..., description="Type of the question")
     options: Optional[List[str]] = None
     correct_option: Optional[str] = None

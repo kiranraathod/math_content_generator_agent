@@ -87,7 +87,11 @@ class QuestionGenerationService:
         )
         
         # Enforce the requested question type to ensure consistency
-        return generated.model_copy(update={"question_type": requirements.question_type})
+        return generated.model_copy(update={
+            "question_type": requirements.question_type,
+            "subject": requirements.subject,
+            "subtopic": requirements.subtopic
+        })
 
     def _build_prompt(
         self, 
@@ -167,6 +171,8 @@ class QuestionGenerationService:
         # Update metadata
         return revised_question.model_copy(update={
             "question_type": requirements.question_type,  # Enforce type consistency
+            "subject": requirements.subject,
+            "subtopic": requirements.subtopic,
             "tests_concept": requirements.target_concept,
             "uses_lesson_terminology": self._check_terminology_usage(revised_question, lesson_context.definitions),
             "revision_count": question.revision_count + 1
