@@ -10,6 +10,16 @@ from get_subtopic_examples import SubtopicExamplesRetriever
 # Load environment variables from .env file
 load_dotenv() 
 
+# --- Helper Functions ---
+def escape_markdown(text: str) -> str:
+    """
+    Escape special characters in text to prevent unwanted Markdown/LaTeX rendering.
+    Specifically escapes dollar signs ($) to prevent them from being interpreted as math blocks.
+    """
+    if not text:
+        return ""
+    return str(text).replace("$", "\$") 
+
 # --- Page Configuration ---
 st.set_page_config(
     page_title="Math Content Generator",
@@ -351,48 +361,82 @@ if generate_btn:
 if st.session_state.generated_questions:
     st.markdown("---")
     
-    # Display lesson first if it was generated
-    if st.session_state.generated_questions and st.session_state.generated_questions[0].get("lesson_title"):
+    # Handle new structure (dict with 'questions' key) or legacy list
+    data = st.session_state.generated_questions
+    questions = data.get('questions', []) if isinstance(data, dict) else data
+    lesson = data.get('lesson') if isinstance(data, dict) else None
+    metadata = data.get('metadata', {}) if isinstance(data, dict) else {}
+    
+    # Display lesson first if available
+    if lesson:
         st.header("📚 Generated Lesson")
         
-        lesson = st.session_state.generated_questions[0]
-        
         # Lesson Title
-        st.markdown(f"### {lesson['lesson_title']}")
+        st.markdown(f"### {lesson.get('title', 'Untitled Lesson')}")
         
         # Introduction
         with st.expander("📖 Introduction", expanded=True):
-            st.markdown(lesson['lesson_introduction'])
+            st.markdown(lesson.get('introduction', ''))
         
         # Real-world Example
         with st.expander("🌍 Real-World Example", expanded=True):
-            st.markdown(lesson['real_world_example'])
+            st.markdown(escape_markdown(lesson.get('real_world_example', '')))
         
         # Key Concepts
         with st.expander("💡 Key Concepts", expanded=True):
-            for idx, concept in enumerate(lesson.get('key_concepts', []), 1):
-                st.markdown(f"**{idx}.** {concept}")
+            for idx, concept in enumerate(lesson.get('concepts', []), 1):
+                st.markdown(f"**{idx}.** {escape_markdown(concept)}")
         
         # Definitions
         with st.expander("📌 Definitions", expanded=True):
-            st.markdown(lesson['definitions'])
+            definitions = lesson.get('definitions', {})
+            if isinstance(definitions, dict):
+                for term, definition in definitions.items():
+                    st.markdown(f"**{term}:** {escape_markdown(definition)}")
+            else:
+                st.markdown(escape_markdown(str(definitions)))
         
         # Practice Tips
         with st.expander("✨ Practice Tips", expanded=True):
-            st.markdown(lesson['practice_tips'])
+            for tip in lesson.get('tips', []):
+                st.markdown(f"- {escape_markdown(tip)}")
         
         st.markdown("---")
+        
+        # Coverage Report
+        if metadata.get('coverage_report'):
+            report = metadata['coverage_report']
+            pct = report.get('coverage_percentage', 0)
+            st.info(f"📊 **Concept Coverage:** {pct:.1f}% of lesson concepts are tested.")
+            
+            if report.get('missing_concepts'):
+                st.warning(f"⚠️ Untested Concepts: {', '.join(report['missing_concepts'])}")
+            else:
+                st.success("✅ All concepts covered!")
+            st.markdown("---")
     
+    # Legacy Lesson Support (embedded in first question)
+    elif questions and questions[0].get("lesson_title"):
+         # ... (Legacy display logic if needed, or just rely on new structure)
+         pass
+
     # Display questions
     st.header("📝 Generated Questions")
     
-    for idx, question in enumerate(st.session_state.generated_questions, 1):
-        with st.expander(f"Question {idx} - {question.get('type', 'Unknown')}", expanded=True):
+    for idx, question in enumerate(questions, 1):
+        # Determine status icon
+        status_icon = "✅"
+        if question.get('validation_status') is False:
+            status_icon = "⚠️"
+            
+        with st.expander(f"Question {idx} {status_icon} - {question.get('type', 'Unknown')}", expanded=True):
             col_q1, col_q2 = st.columns(2)
             with col_q1:
                 st.markdown(f"**Subject:** {question.get('subject', 'N/A')}")
                 st.markdown(f"**Subtopic:** {question.get('subtopic', 'N/A')}")
                 st.markdown(f"**Type:** {question.get('type', 'N/A')}")
+                if question.get('tests_concept'):
+                    st.markdown(f"**Tests Concept:** {question.get('tests_concept')}")
             with col_q2:
                 toggle_key = f"toggle_prompt_{idx}"
                 default = st.session_state.get(toggle_key, False)
@@ -412,7 +456,7 @@ if st.session_state.generated_questions:
                 st.code(prompt_text, language='text')
             
             st.markdown("**Question:**")
-            st.write(question.get('question', 'N/A'))
+            st.markdown(escape_markdown(question.get('question', 'N/A')))
             
             # Display MCQ options if available
             if question.get('type') == 'MCQ' and question.get('options'):
@@ -424,15 +468,18 @@ if st.session_state.generated_questions:
                     # Check if this is the correct option
                     option_letter = option[0] if option else ''
                     if option_letter == correct_option:
-                        st.markdown(f"**{option}**")
+                        st.markdown(f"**{escape_markdown(option)}**")
                     else:
-                        st.markdown(f" {option}")
+                        st.markdown(f" {escape_markdown(option)}")
             
             st.markdown("**Solution:**")
-            st.write(question.get('solution', 'N/A'))
+            st.markdown(escape_markdown(question.get('solution', 'N/A')))
             
             st.markdown("**Answer:**")
             st.success(question.get('answer', 'N/A'))
+            
+            if question.get('revision_count', 0) > 0:
+                st.caption(f"🔄 Revised {question['revision_count']} times for alignment.")
     
     st.markdown("---")
     
@@ -459,14 +506,18 @@ if st.session_state.generated_questions:
                 supabase_service = SupabaseService()
                 
                 rows_to_upload = []
-                for question in st.session_state.generated_questions:
+                for question in questions:
                     row = {
                         "Subject": question.get('subject', 'Unknown'),
                         "Subtopic": question.get('subtopic', 'Unknown'),
                         "Question": question.get('question', ''),
                         "Solution": question.get('solution', ''),
                         "Final_answer": question.get('answer', ''),
-                        "question_type": question.get('type', 'MCQ')
+                        "question_type": question.get('type', 'MCQ'),
+                        # Add new fields if available
+                        "tests_concept": question.get('tests_concept'),
+                        "uses_lesson_terminology": question.get('uses_lesson_terminology'),
+                        "lesson_title": lesson.get('title') if lesson else None
                     }
                     rows_to_upload.append(row)
                 

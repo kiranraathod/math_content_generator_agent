@@ -5,6 +5,7 @@ Responsible for quality assurance of generated content.
 from typing import Dict, List, Optional
 from langchain_core.messages import HumanMessage, SystemMessage
 from models import QuestionState
+from domain_models import GeneratedQuestion, LessonContext, LessonContent
 from services.llm_service import LLMService
 from services.config import MathGeneratorConfig
 
@@ -112,6 +113,84 @@ class ValidationService:
             print(f"Validation errors: {errors}")
         return result
     
+    def validate_alignment(
+        self, 
+        question: GeneratedQuestion, 
+        lesson_context: LessonContext,
+        target_concept: str
+    ) -> tuple[bool, List[str]]:
+        """
+        Validate that the question aligns with the lesson content and target concept.
+        
+        Args:
+            question: The generated question
+            lesson_context: Context from the lesson
+            target_concept: The concept this question is supposed to test
+            
+        Returns:
+            Tuple of (is_valid, validation_errors)
+        """
+        prompt = f"""
+        Analyze this question for alignment with the lesson.
+        
+        Lesson Context:
+        - Concepts: {lesson_context.concepts}
+        - Definitions: {list(lesson_context.definitions.keys())}
+        
+        Target Concept: {target_concept}
+        
+        Question: {question.question_text}
+        Solution: {question.solution}
+        
+        Check for:
+        1. Does the question actually test "{target_concept}"?
+        2. Does it use the terminology defined in the lesson?
+        3. Is the solution consistent with the lesson's definitions?
+        
+        Output VALID if all checks pass. Otherwise output INVALID: [reason].
+        """
+        
+        messages = [
+            SystemMessage(content="You are an educational content auditor."),
+            HumanMessage(content=prompt)
+        ]
+        
+        response_content = self.llm_service.invoke_with_retry(messages)
+        return self._parse_validation_response(response_content)
+
+    def validate_coverage(
+        self, 
+        questions: List[GeneratedQuestion], 
+        lesson: LessonContent
+    ) -> Dict[str, float]:
+        """
+        Calculate concept coverage statistics.
+        
+        Args:
+            questions: List of generated questions
+            lesson: The source lesson
+            
+        Returns:
+            Dictionary with coverage metrics
+        """
+        total_concepts = len(lesson.concepts)
+        if total_concepts == 0:
+            return {"coverage": 0.0}
+            
+        # Count how many unique concepts are tested
+        tested_concepts = set()
+        for q in questions:
+            if q.tests_concept and q.tests_concept in lesson.concepts:
+                tested_concepts.add(q.tests_concept)
+                
+        coverage_pct = (len(tested_concepts) / total_concepts) * 100
+        
+        return {
+            "coverage_percentage": coverage_pct,
+            "tested_concepts": list(tested_concepts),
+            "missing_concepts": [c for c in lesson.concepts if c not in tested_concepts]
+        }
+
     def _format_question_text(self, state: QuestionState) -> str:
         """
         Format question text, including MCQ options if applicable.
