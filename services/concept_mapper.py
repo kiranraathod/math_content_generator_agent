@@ -1,0 +1,63 @@
+"""
+Concept Mapping Service.
+Responsible for creating an intelligent distribution of questions across lesson concepts.
+"""
+from typing import List
+import math
+from domain_models import LessonContent, ConceptMapping, BloomLevel
+
+
+class ConceptMappingService:
+    """
+    Service for planning question coverage.
+    Ensures all lesson concepts are tested with appropriate cognitive progression.
+    """
+
+    def create_coverage_plan(self, lesson: LessonContent, num_questions: int) -> List[ConceptMapping]:
+        """
+        Create a plan mapping each question to a specific concept and Bloom's level.
+        
+        Args:
+            lesson: The generated lesson content
+            num_questions: Total number of questions to generate
+            
+        Returns:
+            List of ConceptMapping objects defining the plan
+        """
+        if not lesson.concepts:
+            raise ValueError("Lesson has no concepts to map")
+            
+        concepts = lesson.concepts
+        num_concepts = len(concepts)
+        plan: List[ConceptMapping] = []
+        
+        # Strategy:
+        # 1. Ensure every concept is covered at least once (if num_questions >= num_concepts)
+        # 2. Distribute remaining questions across concepts
+        # 3. Progress Bloom's levels: Remember -> Understand -> Apply -> Analyze
+        
+        # Define progression of Bloom's levels
+        bloom_progression = [
+            BloomLevel.REMEMBER,
+            BloomLevel.UNDERSTAND,
+            BloomLevel.APPLY,
+            BloomLevel.ANALYZE
+        ]
+        
+        for i in range(num_questions):
+            # Round-robin distribution of concepts
+            concept_idx = i % num_concepts
+            target_concept = concepts[concept_idx]
+            
+            # Determine Bloom's level based on how many times we've seen this concept
+            cycle = i // num_concepts
+            bloom_idx = min(cycle, len(bloom_progression) - 1)
+            bloom_level = bloom_progression[bloom_idx]
+            
+            plan.append(ConceptMapping(
+                question_index=i,
+                target_concept=target_concept,
+                bloom_level=bloom_level
+            ))
+            
+        return plan

@@ -5,13 +5,18 @@ Following SOLID principles with separated concerns.
 """
 import os
 import json
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from models import QuestionState
 from services import LLMService, QuestionService, ValidationService, LessonService
-from services.config import MathGeneratorConfig  # ✅ ADDED: Config import
+from services.config import MathGeneratorConfig
 from workflow import WorkflowOrchestrator
 from utils import ExportService
+
+# New Architecture Imports
+from services.orchestrator import EducationalContentOrchestrator
+from services.exporter import ContentPackageExporter
+from domain_models import QuestionType
 
 
 class MathQuestionGenerator:
@@ -32,29 +37,32 @@ class MathQuestionGenerator:
         if not api_key:
             raise ValueError("Google API key is required")
         
-        # ✅ ADDED: Create config instance with model settings
+        # Create config instance with model settings
         self.config = MathGeneratorConfig(
             llm_model=model,
             llm_temperature=0.7
         )
         
-        # Initialize services (Dependency Injection)
-        # ✅ UPDATED: Pass config to services
+        # Initialize legacy services (Dependency Injection)
         self.llm_service = LLMService(api_key, model)
         self.question_service = QuestionService(self.llm_service, self.config)
         self.validation_service = ValidationService(self.llm_service, self.config)
         self.lesson_service = LessonService(self.llm_service, self.config)
         
-        # ✅ UPDATED: Pass config to workflow orchestrator
+        # Initialize legacy workflow orchestrator
         self.workflow = WorkflowOrchestrator(
             self.question_service,
             self.validation_service,
             self.lesson_service,
-            self.config  # ✅ ADDED: Config parameter
+            self.config
         )
         
-        # Initialize export service
+        # Initialize legacy export service
         self.export_service = ExportService()
+
+        # --- NEW ARCHITECTURE ---
+        self.orchestrator = EducationalContentOrchestrator(self.llm_service)
+        self.package_exporter = ContentPackageExporter()
     
     def generate_question(
         self,
@@ -67,19 +75,8 @@ class MathQuestionGenerator:
         previous_questions: Optional[List[str]] = None
     ) -> dict:
         """
-        Generate a single math question.
-        
-        Args:
-            subject: Subject area (e.g., "Mathematics")
-            subtopic: Specific subtopic (e.g., "Algebra")
-            question_type: Type of question ("MCQ", "Fill-in-the-Blank", "Yes/No")
-            level: Difficulty level (1-6, default: 1)
-            use_examples: Whether to fetch and include database examples (default: False)
-            generate_lesson: Whether to generate a lesson before the question (default: False)
-            previous_questions: List of previously generated question texts for batch diversity (default: None)
-            
-        Returns:
-            Dictionary containing the generated question, solution, and answer (and lesson if requested)
+        Legacy method for single question generation.
+        Maintained for backward compatibility.
         """
         initial_state = QuestionState(
             subject=subject,
@@ -103,16 +100,13 @@ class MathQuestionGenerator:
         
         result = self.workflow.execute(initial_state)
 
-        # Check if validation failed and raise an exception to skip this question
         if result.get("validation_failed", False):
-            # Use config values for error message
             max_attempts = self.config.max_validation_attempts
             error_msg = f"Question validation failed after {max_attempts} attempts"
             if result.get("validation_errors"):
                 error_msg += f": {', '.join(result.get('validation_errors'))}"
             raise ValueError(error_msg)
 
-        # Build the question dict
         question_dict = self.export_service.format_question_for_export(
             subject=result.get("subject", subject),
             subtopic=result.get("subtopic", subtopic),
@@ -126,7 +120,6 @@ class MathQuestionGenerator:
             correct_option=result.get("correct_option")
         )
         
-        # Add lesson fields if lesson was generated
         if generate_lesson and result.get("lesson_title"):
             question_dict.update({
                 "lesson_title": result.get("lesson_title"),
@@ -147,100 +140,81 @@ class MathQuestionGenerator:
         level: int = 1,
         use_examples: bool = False,
         generate_lesson: bool = False
-    ) -> List[dict]:
+    ) -> Dict[str, Any]:
         """
-        Generate multiple questions based on distribution.
+        Generate multiple questions.
+        If generate_lesson is True, uses the new Orchestrator architecture.
+        Otherwise, uses the legacy batch loop.
         
-        Args:
-            subject: Subject area
-            subtopic: Specific subtopic
-            question_distribution: Dict mapping question types to counts
-                                 e.g., {"MCQ": 5, "Fill-in-the-Blank": 3}
-            level: Difficulty level (1-6, default: 1)
-            use_examples: Whether to fetch and include database examples (default: False)
-            generate_lesson: Whether to generate a lesson before questions (default: False)
-            
         Returns:
-            List of generated question dictionaries (lesson included in first question if generated)
+            Dict containing 'questions' list and optional 'lesson' data.
         """
-        questions = []
-        previous_question_texts = []  # Track previously generated question texts for diversity
         total_questions = sum(question_distribution.values())
-        current = 0
-        lesson_generated = False
         
-        print(f"\nGenerating {'lesson and ' if generate_lesson else ''}{total_questions} questions at Level {level}...")
-        if use_examples:
-            print("Using database examples as inspiration...")
-        print("Using reactive rate-limiting (will retry on 429 errors).")
-        print(f"(Each question requires ~3 API calls{', +1 for lesson' if generate_lesson else ''})\n")
+        # --- NEW PATH: Orchestrator ---
+        if generate_lesson:
+            print(f"🚀 Using New Orchestrator for {subject}: {subtopic}")
+            
+            content_package = self.orchestrator.generate_content_package(
+                subject=subject,
+                subtopic=subtopic,
+                level=level,
+                num_questions=total_questions,
+                question_distribution=question_distribution
+            )
+            
+            # Transform to frontend format
+            return self.package_exporter.to_frontend_format(content_package)
+
+        # --- OLD PATH: Legacy Batch Loop ---
+        print(f"⚙️ Using Legacy Workflow for {subject}: {subtopic}")
+        questions = []
+        previous_question_texts = []
+        current = 0
         
         for question_type, count in question_distribution.items():
             for i in range(count):
                 current += 1
                 try:
-                    # Generate lesson only once (with first question)
-                    gen_lesson = generate_lesson and not lesson_generated
-                    
-                    print(f"Generating {'lesson + ' if gen_lesson else ''}question {current}/{total_questions} ({question_type}, Level {level})...")
-                    
-                    # Pass previous questions for diversity
+                    print(f"Generating question {current}/{total_questions} ({question_type})...")
                     question = self.generate_question(
                         subject=subject,
                         subtopic=subtopic,
                         question_type=question_type,
                         level=level,
                         use_examples=use_examples,
-                        generate_lesson=gen_lesson,
+                        generate_lesson=False, # Lesson handled by orchestrator path
                         previous_questions=previous_question_texts
                     )
-                    
-                    if gen_lesson:
-                        lesson_generated = True
-                    
                     questions.append(question)
-                    
-                    # Add the generated question text to history for next iteration
                     if question.get('question'):
                         previous_question_texts.append(question['question'])
-                    
-                    print(f"✓ Successfully generated {'lesson + ' if gen_lesson else ''}question {current}")
-                except ValueError as e:
-                    # Validation failure - skip this question
-                    print(f"⚠️  Skipping {question_type} question: {str(e)}")
-                    continue
+                    print(f"✓ Generated question {current}")
                 except Exception as e:
-                    print(f"✗ Error generating {question_type} question: {str(e)}")
+                    print(f"✗ Error: {str(e)}")
                     continue
         
-        print(f"\nCompleted! Generated {len(questions)}/{total_questions} questions")
-        if generate_lesson and lesson_generated:
-            print("✓ Lesson included in first question")
-        print(f"Total API calls made: {self.llm_service.get_api_call_count()}")
-        return questions
-    
-    def export_to_json(self, questions: List[dict], filename: str = "questions.json") -> str:
+        return {"questions": questions}
+
+    def export_to_json(self, data: Any, filename: str = "questions.json") -> str:
         """
-        Export questions to a JSON file.
-        
-        Args:
-            questions: List of questions to export
-            filename: Output filename (default: questions.json)
-            
-        Returns:
-            Path to the exported file
+        Export data to JSON.
         """
-        return self.export_service.export_to_json(questions, filename)
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        return filename
 
 
 if __name__ == "__main__":
     # Example usage
     generator = MathQuestionGenerator()
     
-    test_question = generator.generate_question(
+    # Test New Orchestrator Path
+    print("\n--- Testing Orchestrator Path ---")
+    result = generator.generate_questions_batch(
         subject="Mathematics",
         subtopic="Algebra",
-        question_type="MCQ"
+        question_distribution={"MCQ": 2},
+        generate_lesson=True
     )
-    
-    print(json.dumps(test_question, indent=2))
+    print(json.dumps(result, indent=2))
