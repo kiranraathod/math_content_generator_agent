@@ -31,27 +31,31 @@ class LessonGenerationService:
             LessonContent: Structured lesson object
         """
         system_prompt = """You are an expert educational content creator. 
-        Your goal is to create a clear, engaging, and structured lesson.
+        Your goal is to create a clear, concise, and structured lesson.
+        
+        STYLE GUIDELINES:
+        1. Use simple, direct language (Grade 8 reading level).
+        2. Avoid flowery, academic, or overly complex jargon.
+        3. Be extremely concise. Every word must add value.
+        4. Do NOT use emojis. Use professional formatting only.
         
         The lesson MUST include:
-        1. A catchy Title
-        2. An engaging Introduction
-        3. 3-5 Key Concepts (atomic ideas taught in this lesson)
-        4. Definitions for important terms (as a dictionary)
-        5. A Real-world Example Scenario (concrete application)
-        6. 3 Practical Tips for mastery
+        1. Title: Catchy but clear.
+        2. Introduction: MAX 50 words. Hook the student immediately.
+        3. Key Concepts: 3-5 atomic ideas. MAX 2 sentences per concept. Use bullet points.
+        4. Definitions: Clear, dictionary-style definitions for important terms.
+        5. Real-world Example: MAX 100 words. Focus on the application/mechanics, not the backstory.
+        6. Tips: 3 short, actionable one-liners.
         
-        Ensure the content is age-appropriate for the requested difficulty level.
-        
-        IMPORTANT: Do NOT use emojis in the content. Use professional, clear language.
+        Present information in small chunks to reduce cognitive load. Use bolding for key terms.
         """
 
-        user_prompt = f"""Create a lesson for:
+        user_prompt = f"""Create a concise lesson for:
         Subject: {subject}
         Topic: {subtopic}
         Level: {level}
         
-        Focus on explaining the core mechanics and "why" behind the concepts.
+        Focus on the core mechanics and "why" behind the concepts. Keep it brief.
         """
 
         messages = [
