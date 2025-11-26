@@ -114,7 +114,7 @@ class EducationalContentOrchestrator:
             # Revision Loop (Max 2 attempts)
             max_revisions = 2
             while not is_valid and question.revision_count < max_revisions:
-                print(f"  ⚠️ Validation failed: {errors}. Revising...")
+                print(f"  [WARN] Validation failed: {errors}. Revising...")
                 question = self.question_service.revise_aligned(
                     question, errors, lesson_context, req
                 )
@@ -123,10 +123,10 @@ class EducationalContentOrchestrator:
                 )
             
             if not is_valid:
-                print(f"  ❌ Failed to align Q{mapping.question_index + 1} after revisions. Marking as failed.")
+                print(f"  [FAIL] Failed to align Q{mapping.question_index + 1} after revisions. Marking as failed.")
                 question = question.model_copy(update={"validation_status": False})
             else:
-                print(f"  ✅ Q{mapping.question_index + 1} aligned.")
+                print(f"  [OK] Q{mapping.question_index + 1} aligned.")
                 question = question.model_copy(update={"validation_status": True})
             
             questions.append(question)

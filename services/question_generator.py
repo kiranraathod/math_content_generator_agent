@@ -70,6 +70,12 @@ class QuestionGenerationService:
         
         system_prompt = """You are an expert math question generator.
         Create a high-quality question with a clear solution and answer.
+        
+        CONCISENESS RULES:
+        1. Question text must be under 50 words unless a complex scenario is required.
+        2. Solutions must be broken down into numbered steps. Minimal text between steps.
+        3. Do NOT use emojis.
+        4. Use simple, direct language.
         """
         
         # Build the prompt based on whether we have context
@@ -142,6 +148,11 @@ class QuestionGenerationService:
         """
         system_prompt = """You are an expert math question editor.
         Fix the issues in the question while ensuring it remains aligned with the lesson.
+        
+        Maintain strict conciseness:
+        - Question text < 50 words.
+        - Step-by-step solutions.
+        - No emojis.
         """
         
         user_prompt = f"""
