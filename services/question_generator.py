@@ -73,14 +73,18 @@ class QuestionGenerationService:
         
         CONCISENESS RULES:
         1. Question text must be under 50 words unless a complex scenario is required.
-        2. Solutions must be broken down into numbered steps. Minimal text between steps.
-        3. Do NOT use emojis.
-        4. Use simple, direct language.
+        2. Do NOT use emojis.
+        3. Use simple, direct language.
 
         QUESTION TYPE RULES:
         - For "Yes/No" questions: Test CONCEPTUAL understanding (properties, definitions, logic). 
           - BAD: "Is 5 + 5 = 10?" (Calculation)
           - GOOD: "Does adding two odd numbers always result in an even number?" (Concept)
+        
+        - For "MCQ" questions (STRICT):
+          1. MUST have exactly 4 options labeled A., B., C., D.
+          2. Correct Option must be the single letter (A, B, C, or D).
+          3. Solution must be a 1-2 line CONCEPTUAL explanation (do NOT use numbered steps).
         """
         
         # Build the prompt based on whether we have context
@@ -119,6 +123,8 @@ class QuestionGenerationService:
 
         if req.question_type == QuestionType.YES_NO:
             base_prompt += "\nIMPORTANT: This must be a CONCEPTUAL Yes/No question. Do not ask for a simple calculation."
+        elif req.question_type == QuestionType.MCQ:
+            base_prompt += "\nIMPORTANT: Provide exactly 4 options (A-D). Solution must be a short conceptual explanation."
         
         if context:
             # Add alignment instructions
