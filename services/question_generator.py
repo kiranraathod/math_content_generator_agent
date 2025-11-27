@@ -76,6 +76,11 @@ class QuestionGenerationService:
         2. Solutions must be broken down into numbered steps. Minimal text between steps.
         3. Do NOT use emojis.
         4. Use simple, direct language.
+
+        QUESTION TYPE RULES:
+        - For "Yes/No" questions: Test CONCEPTUAL understanding (properties, definitions, logic). 
+          - BAD: "Is 5 + 5 = 10?" (Calculation)
+          - GOOD: "Does adding two odd numbers always result in an even number?" (Concept)
         """
         
         # Build the prompt based on whether we have context
@@ -111,6 +116,9 @@ class QuestionGenerationService:
         Topic: {req.subtopic}
         Level: {req.level}
         """
+
+        if req.question_type == QuestionType.YES_NO:
+            base_prompt += "\nIMPORTANT: This must be a CONCEPTUAL Yes/No question. Do not ask for a simple calculation."
         
         if context:
             # Add alignment instructions
