@@ -51,7 +51,7 @@ class ValidationService:
         Analyze this question for alignment with the lesson.
         
         Lesson Context:
-        - Concepts: {lesson_context.concepts}
+        - Concepts: {lesson_context.key_concepts}
         - Definitions: {list(lesson_context.definitions.keys())}
         
         Target Concept: {target_concept}
@@ -90,14 +90,17 @@ class ValidationService:
         Returns:
             Dictionary with coverage metrics
         """
-        total_concepts = len(lesson.concepts)
+        # Extract key concepts from screens
+        key_concepts = [screen.key_term for screen in lesson.screens if screen.key_term]
+        
+        total_concepts = len(key_concepts)
         if total_concepts == 0:
             return {"coverage": 0.0}
             
         # Count how many unique concepts are tested
         tested_concepts = set()
         for q in questions:
-            if q.tests_concept and q.tests_concept in lesson.concepts:
+            if q.tests_concept and q.tests_concept in key_concepts:
                 tested_concepts.add(q.tests_concept)
                 
         coverage_pct = (len(tested_concepts) / total_concepts) * 100
@@ -105,7 +108,7 @@ class ValidationService:
         return {
             "coverage_percentage": coverage_pct,
             "tested_concepts": list(tested_concepts),
-            "missing_concepts": [c for c in lesson.concepts if c not in tested_concepts]
+            "missing_concepts": [c for c in key_concepts if c not in tested_concepts]
         }
 
     

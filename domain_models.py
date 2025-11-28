@@ -32,27 +32,33 @@ class DefinitionItem(BaseModel):
     definition: str
 
 
+class LessonScreen(BaseModel):
+    """A single screen in a mobile-friendly lesson."""
+    screen_number: int = Field(..., description="Screen order (1-indexed)")
+    content: str = Field(..., description="1-3 sentences for this screen")
+    key_term: Optional[str] = Field(None, description="Key term introduced in this screen")
+
+
 class LessonContent(BaseModel):
     """
-    Represents a generated educational lesson.
+    Represents a generated educational lesson in mobile-friendly screen format.
     Immutable model containing all lesson components.
     """
     model_config = ConfigDict(frozen=True)
 
     title: str = Field(..., description="Title of the lesson")
-    introduction: str = Field(..., description="Engaging introduction to the topic")
-    concepts: List[str] = Field(..., description="List of 3-5 key concepts taught")
+    screens: List[LessonScreen] = Field(..., description="4-6 screens merging example and concepts")
     definitions: List[DefinitionItem] = Field(..., description="List of important definitions")
-    real_world_example: str = Field(..., description="A concrete example scenario")
     tips: List[str] = Field(..., description="Practical tips for understanding")
     
     @model_validator(mode='after')
     def validate_content(self) -> 'LessonContent':
-        if not self.concepts:
-            raise ValueError("Lesson must have at least one concept")
+        if not self.screens or len(self.screens) < 4 or len(self.screens) > 6:
+            raise ValueError("Lesson must have between 4 and 6 screens")
         if not self.definitions:
             raise ValueError("Lesson must have at least one definition")
         return self
+
 
 
 class LessonContext(BaseModel):
@@ -62,9 +68,10 @@ class LessonContext(BaseModel):
     """
     model_config = ConfigDict(frozen=True)
 
-    concepts: List[str]
+    key_concepts: List[str] = Field(..., description="Key concepts from screens")
     definitions: Dict[str, str]
-    example_scenario: str
+    example_scenario: str = Field(..., description="Combined screen content as context")
+
 
 
 class QuestionRequirements(BaseModel):
@@ -128,12 +135,15 @@ class EducationalContent(BaseModel):
 
     def get_coverage_report(self) -> Dict[str, float]:
         """Calculate percentage of concepts covered."""
-        total_concepts = len(self.lesson.concepts)
+        # Extract key concepts from screens
+        key_concepts = [screen.key_term for screen in self.lesson.screens if screen.key_term]
+        
+        total_concepts = len(key_concepts)
         if total_concepts == 0:
             return {"coverage": 0.0}
         
-        covered_concepts = len([c for c in self.lesson.concepts if c in self.concept_coverage])
+        covered_concepts = len([c for c in key_concepts if c in self.concept_coverage])
         return {
             "coverage_percentage": (covered_concepts / total_concepts) * 100,
-            "missing_concepts": [c for c in self.lesson.concepts if c not in self.concept_coverage]
+            "missing_concepts": [c for c in key_concepts if c not in self.concept_coverage]
         }

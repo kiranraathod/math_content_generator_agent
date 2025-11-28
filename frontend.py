@@ -374,21 +374,29 @@ if st.session_state.generated_questions:
         # Lesson Title
         st.markdown(f"### {lesson.get('title', 'Untitled Lesson')}")
         
-        # Introduction
-        with st.expander("📖 Introduction", expanded=True):
-            st.markdown(lesson.get('introduction', ''))
+        # Screens Display (Mobile-Friendly)
+        screens = lesson.get('screens', [])
+        if screens:
+            st.markdown("---")
+            st.subheader("📱 Lesson Screens")
+            st.caption("Tap through each screen to learn step-by-step")
+            
+            # Use tabs for screen navigation
+            screen_tabs = st.tabs([f"Screen {s.get('screen_number', i+1)}" for i, s in enumerate(screens)])
+            
+            for idx, (tab, screen) in enumerate(zip(screen_tabs, screens)):
+                with tab:
+                    # Display screen content
+                    st.markdown(escape_markdown(screen.get('content', '')))
+                    
+                    # Show key term if present
+                    if screen.get('key_term'):
+                        st.info(f"🔑 **Key Term**: {screen.get('key_term')}")
         
-        # Real-world Example
-        with st.expander("🌍 Real-World Example", expanded=True):
-            st.markdown(escape_markdown(lesson.get('real_world_example', '')))
-        
-        # Key Concepts
-        with st.expander("💡 Key Concepts", expanded=True):
-            for idx, concept in enumerate(lesson.get('concepts', []), 1):
-                st.markdown(f"**{idx}.** {escape_markdown(concept)}")
+        st.markdown("---")
         
         # Definitions
-        with st.expander("📌 Definitions", expanded=True):
+        with st.expander("📌 Definitions", expanded=False):
             definitions = lesson.get('definitions', {})
             if isinstance(definitions, dict):
                 for term, definition in definitions.items():
@@ -397,7 +405,7 @@ if st.session_state.generated_questions:
                 st.markdown(escape_markdown(str(definitions)))
         
         # Practice Tips
-        with st.expander("✨ Practice Tips", expanded=True):
+        with st.expander("✨ Practice Tips", expanded=False):
             for tip in lesson.get('tips', []):
                 st.markdown(f"- {escape_markdown(tip)}")
         
