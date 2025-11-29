@@ -50,6 +50,12 @@ class LessonGenerationService:
         - Use bold for **key terms** when first mentioned.
         - Keep it conversational and encouraging.
         
+        KEY_TERM REQUIREMENTS (CRITICAL):
+        - When you introduce a new math term in a screen, set key_term to that term (e.g., "power", "base", "exponent")
+        - This helps create diverse questions later
+        - Only set key_term when you're explicitly teaching that concept
+        - Early screens (examples) may have null key_term
+        
         The lesson MUST also include:
         - Title: Short and clear (5th grade friendly).
         - Definitions: Dictionary-style for key terms.
@@ -61,7 +67,10 @@ class LessonGenerationService:
         Topic: {subtopic}
         Level: {level}
         
-        Remember: Start with the example, then teach the concept through it. Keep each screen super short!
+        Remember: 
+        - Start with the example, then teach the concept through it
+        - Keep each screen super short!
+        - Set key_term when you introduce important math terms
         """
 
         messages = [

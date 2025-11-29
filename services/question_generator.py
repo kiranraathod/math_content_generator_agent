@@ -77,9 +77,20 @@ class QuestionGenerationService:
         3. Use simple, direct language.
 
         QUESTION TYPE RULES:
-        - For "Yes/No" questions: Test CONCEPTUAL understanding (properties, definitions, logic). 
-          - BAD: "Is 5 + 5 = 10?" (Calculation)
-          - GOOD: "Does adding two odd numbers always result in an even number?" (Concept)
+        - For "Yes/No" questions (PRIORITY - CONCEPTUAL UNDERSTANDING):
+          Create a concept-based Yes/No question that tests mathematical reasoning, definitions, and relationships.
+          - Present a short statement/claim that could be true or false
+          - Focus on: Properties, definitions, logical relationships (NOT calculations)
+          - The answer requires understanding WHY, not just computation
+          - Solution MUST explain the underlying conceptual reasoning that leads to the answer
+          
+          EXAMPLES:
+          • "If the product of two numbers is zero, then both numbers must be zero. Is this correct?"
+          • "All triangles with equal sides are also equal in all angles. True or false?"
+          • "If two lines have the same slope, they must be the same line. Is this correct?"
+          • "Dividing a number by a fraction greater than 1 makes it smaller. Correct or wrong?"
+          
+          BAD: "Is 5 + 5 = 10?" (This is calculation, not conceptual)
         
         - For "MCQ" questions (STRICT):
           1. MUST have exactly 4 options labeled A., B., C., D.
@@ -122,7 +133,14 @@ class QuestionGenerationService:
         """
 
         if req.question_type == QuestionType.YES_NO:
-            base_prompt += "\nIMPORTANT: This must be a CONCEPTUAL Yes/No question. Do not ask for a simple calculation."
+            base_prompt += """
+CRITICAL: Create a concept-based Yes/No question.
+- Present a statement/claim that tests understanding of definitions, properties, or logical relationships
+- The student must decide if it's correct and explain WHY (based on concepts, not calculation)
+- Focus on clarity and conceptual logic
+- The SOLUTION must detail the underlying theory/reasoning that leads to the conclusion
+- Suitable for ages 10-16
+"""
         elif req.question_type == QuestionType.MCQ:
             base_prompt += "\nIMPORTANT: Provide exactly 4 options (A-D). Solution must be a short conceptual explanation."
         
