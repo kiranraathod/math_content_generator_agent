@@ -24,10 +24,13 @@ class ConceptMappingService:
         Returns:
             List of ConceptMapping objects defining the plan
         """
-        if not lesson.concepts:
-            raise ValueError("Lesson has no concepts to map")
-            
-        concepts = lesson.concepts
+        # Extract key concepts from screens (terms mentioned in screens)
+        concepts = [screen.key_term for screen in lesson.screens if screen.key_term]
+        
+        # Fallback if no key terms: use screen content snippets
+        if not concepts:
+            concepts = [f"Concept from screen {i+1}" for i in range(min(len(lesson.screens), 3))]
+        
         num_concepts = len(concepts)
         plan: List[ConceptMapping] = []
         
@@ -61,3 +64,4 @@ class ConceptMappingService:
             ))
             
         return plan
+

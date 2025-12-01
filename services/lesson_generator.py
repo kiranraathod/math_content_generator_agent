@@ -30,32 +30,47 @@ class LessonGenerationService:
         Returns:
             LessonContent: Structured lesson object
         """
-        system_prompt = """You are an expert educational content creator. 
-        Your goal is to create a clear, concise, and structured lesson.
+        system_prompt = """You are an expert educational content creator for 5th grade students. 
+        Your goal is to create a mobile-friendly, screen-based lesson that teaches through examples.
         
-        STYLE GUIDELINES:
-        1. Use simple, direct language (Grade 8 reading level).
-        2. Avoid flowery, academic, or overly complex jargon.
-        3. Be extremely concise. Every word must add value.
-        4. Do NOT use emojis. Use professional formatting only.
+        SCREEN-BASED FORMAT:
+        1. Generate 4-6 screens total.
+        2. Each screen: 1-3 simple sentences MAX.
+        3. Use 5th grade language (short words, simple sentences).
+        4. Do NOT use emojis.
         
-        The lesson MUST include:
-        1. Title: Catchy but clear.
-        2. Introduction: MAX 50 words. Hook the student immediately.
-        3. Key Concepts: 3-5 atomic ideas. MAX 2 sentences per concept. Use bullet points.
-        4. Definitions: Clear, dictionary-style definitions for important terms.
-        5. Real-world Example: MAX 100 words. Focus on the application/mechanics, not the backstory.
-        6. Tips: 3 short, actionable one-liners.
+        SCREEN PROGRESSION:
+        - Screens 1-2: Start with a real-world example. Set the scene step-by-step.
+        - Screens 3-4: Introduce the math concept using the example. Define key terms naturally.
+        - Screen 5-6: Summary. Show why this matters or how to use it.
         
-        Present information in small chunks to reduce cognitive load. Use bolding for key terms.
+        PEDAGOGICAL RULES:
+        - Teach THROUGH the example, not separately from it.
+        - Introduce one idea per screen.
+        - Use bold for **key terms** when first mentioned.
+        - Keep it conversational and encouraging.
+        
+        KEY_TERM REQUIREMENTS (CRITICAL):
+        - When you introduce a new math term in a screen, set key_term to that term (e.g., "power", "base", "exponent")
+        - This helps create diverse questions later
+        - Only set key_term when you're explicitly teaching that concept
+        - Early screens (examples) may have null key_term
+        
+        The lesson MUST also include:
+        - Title: Short and clear (5th grade friendly).
+        - Definitions: Dictionary-style for key terms.
+        - Tips: 3 short, actionable one-liners.
         """
 
-        user_prompt = f"""Create a concise lesson for:
+        user_prompt = f"""Create a mobile-friendly lesson for a 5th grader:
         Subject: {subject}
         Topic: {subtopic}
         Level: {level}
         
-        Focus on the core mechanics and "why" behind the concepts. Keep it brief.
+        Remember: 
+        - Start with the example, then teach the concept through it
+        - Keep each screen super short!
+        - Set key_term when you introduce important math terms
         """
 
         messages = [
@@ -71,6 +86,7 @@ class LessonGenerationService:
         
         return lesson
 
+
     def extract_context(self, lesson: LessonContent) -> LessonContext:
         """
         Extracts only the data needed for question generation context.
@@ -81,8 +97,15 @@ class LessonGenerationService:
         Returns:
             LessonContext: Lightweight context object
         """
+        # Extract key concepts from screens (terms mentioned)
+        key_concepts = [screen.key_term for screen in lesson.screens if screen.key_term]
+        
+        # Combine all screen content as example scenario
+        combined_content = " ".join([screen.content for screen in lesson.screens])
+        
         return LessonContext(
-            concepts=lesson.concepts,
+            key_concepts=key_concepts if key_concepts else ["General concept from " + lesson.title],
             definitions={item.term: item.definition for item in lesson.definitions},
-            example_scenario=lesson.real_world_example
+            example_scenario=combined_content
         )
+

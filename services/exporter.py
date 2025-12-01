@@ -23,15 +23,20 @@ class ContentPackageExporter:
         return {
             "lesson": {
                 "title": content.lesson.title,
-                "introduction": content.lesson.introduction,
-                "concepts": content.lesson.concepts,
+                "screens": [
+                    {
+                        "screen_number": screen.screen_number,
+                        "content": screen.content,
+                        "key_term": screen.key_term
+                    } for screen in content.lesson.screens
+                ],
                 "definitions": {item.term: item.definition for item in content.lesson.definitions},
-                "real_world_example": content.lesson.real_world_example,
                 "tips": content.lesson.tips
             },
             "questions": [self._format_question(q) for q in content.questions],
             "metadata": content.metadata
         }
+
 
     def to_database_format(
         self, 

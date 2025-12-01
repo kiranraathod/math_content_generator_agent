@@ -145,31 +145,12 @@ col1, col2 = st.columns([3, 2])
 
 with col1:
     # ============================================================================
-    # LESSON GENERATION SECTION (NEW)
+    # LESSON GENERATION SECTION
     # ============================================================================
     with st.container(border=True):
         st.subheader("📚 Lesson Generation")
-        
-        col_desc, col_toggle = st.columns([3, 1])
-        
-        with col_desc:
-            st.markdown("""
-            Generate a friendly, engaging lesson with real-world examples and emojis before creating questions.
-            Perfect for introducing new topics to students! 🎓
-            """)
-        
-        with col_toggle:
-            generate_lesson = st.toggle(
-                "Enable Lesson",
-                value=False,
-                key="lesson_toggle",
-                help="Toggle to generate a lesson along with questions"
-            )
-        
-        if generate_lesson:
-            st.success("✅ A lesson will be generated first, followed by questions")
-        else:
-            st.info("ℹ️ Questions only (no lesson)")
+        st.info("✅ A lesson will be automatically generated to ensure questions are aligned with specific concepts.")
+
     
     # ============================================================================
     # QUESTION PARAMETERS SECTION
@@ -325,7 +306,7 @@ if generate_btn:
         st.error("Question type counts must sum to the Total Number of Questions")
     else:
         try:
-            with st.spinner(f"Generating {'lesson and ' if generate_lesson else ''}{calculated_total} questions... (This may take a moment)"):
+            with st.spinner(f"Generating lesson and {calculated_total} questions... (This may take a moment)"):
                 
                 generator = MathQuestionGenerator(api_key=api_key, model=model)
                 
@@ -344,11 +325,11 @@ if generate_btn:
                     question_distribution=question_distribution,
                     level=level,
                     use_examples=use_examples,
-                    generate_lesson=generate_lesson  # Pass the lesson flag
+                    generate_lesson=True  # Always generate lesson
                 )
                 
                 st.session_state.generated_questions = questions
-                st.success(f"Successfully generated {len(questions)} questions{' with lesson' if generate_lesson else ''}")
+                st.success(f"Successfully generated {len(questions)} questions with lesson")
                 
                 # Show the real API call count
                 st.info(f"Total API calls made: {generator.llm_service.get_api_call_count()}")
@@ -374,21 +355,29 @@ if st.session_state.generated_questions:
         # Lesson Title
         st.markdown(f"### {lesson.get('title', 'Untitled Lesson')}")
         
-        # Introduction
-        with st.expander("📖 Introduction", expanded=True):
-            st.markdown(lesson.get('introduction', ''))
+        # Screens Display (Mobile-Friendly)
+        screens = lesson.get('screens', [])
+        if screens:
+            st.markdown("---")
+            st.subheader("📱 Lesson Screens")
+            st.caption("Tap through each screen to learn step-by-step")
+            
+            # Use tabs for screen navigation
+            screen_tabs = st.tabs([f"Screen {s.get('screen_number', i+1)}" for i, s in enumerate(screens)])
+            
+            for idx, (tab, screen) in enumerate(zip(screen_tabs, screens)):
+                with tab:
+                    # Display screen content
+                    st.markdown(escape_markdown(screen.get('content', '')))
+                    
+                    # Show key term if present
+                    if screen.get('key_term'):
+                        st.info(f"🔑 **Key Term**: {screen.get('key_term')}")
         
-        # Real-world Example
-        with st.expander("🌍 Real-World Example", expanded=True):
-            st.markdown(escape_markdown(lesson.get('real_world_example', '')))
-        
-        # Key Concepts
-        with st.expander("💡 Key Concepts", expanded=True):
-            for idx, concept in enumerate(lesson.get('concepts', []), 1):
-                st.markdown(f"**{idx}.** {escape_markdown(concept)}")
+        st.markdown("---")
         
         # Definitions
-        with st.expander("📌 Definitions", expanded=True):
+        with st.expander("📌 Definitions", expanded=False):
             definitions = lesson.get('definitions', {})
             if isinstance(definitions, dict):
                 for term, definition in definitions.items():
@@ -397,7 +386,7 @@ if st.session_state.generated_questions:
                 st.markdown(escape_markdown(str(definitions)))
         
         # Practice Tips
-        with st.expander("✨ Practice Tips", expanded=True):
+        with st.expander("✨ Practice Tips", expanded=False):
             for tip in lesson.get('tips', []):
                 st.markdown(f"- {escape_markdown(tip)}")
         
@@ -542,7 +531,7 @@ st.markdown("""
 
 This application uses **LangGraph** to create a reliable workflow for generating math questions:
 
-1. **Lesson Generation** (Optional): AI creates a friendly, engaging lesson with real-world examples
+1. **Lesson Generation**: AI creates a friendly, engaging lesson with real-world examples
 2. **Question Generation**: AI creates a math question based on your parameters
 3. **Question Validation**: Ensures the question is clear and complete
 4. **Answer Validation**: Verifies the answer is correct and properly formatted
