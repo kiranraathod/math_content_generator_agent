@@ -3,6 +3,11 @@ Educational Content Orchestrator.
 Coordinates the generation of lessons, concept maps, and aligned questions.
 """
 import time
+import logging
+
+# Configure logger
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 from typing import List, Dict, Any
 
 from domain_models import (
@@ -15,7 +20,12 @@ from services.llm_service import LLMService
 from services.lesson_generator import LessonGenerationService
 from services.concept_mapper import ConceptMappingService
 from services.question_generator import QuestionGenerationService
+from services.question_generator import QuestionGenerationService
 from services.validation_service import ValidationService
+try:
+    from langfuse.langchain import CallbackHandler
+except ImportError:
+    CallbackHandler = None
 
 
 class EducationalContentOrchestrator:
@@ -53,6 +63,18 @@ class EducationalContentOrchestrator:
         """
         start_time = time.time()
         
+        # Initialize LangFuse Callback
+        callbacks = []
+        if CallbackHandler:
+            try:
+                langfuse_handler = CallbackHandler()
+                callbacks.append(langfuse_handler)
+                logger.info("✅ LangFuse initialized successfully and ready to trace.")
+            except Exception as e:
+                logger.error(f"❌ Failed to initialize LangFuse: {e}")
+        else:
+            logger.warning("⚠️ LangFuse not available (module not found).")
+        
         # Default to MCQ if no distribution provided
         if not question_distribution:
             question_distribution = {"MCQ": num_questions}
@@ -70,7 +92,7 @@ class EducationalContentOrchestrator:
         
         # 1. Generate Lesson
         print(f"Generating lesson for {subject}: {subtopic}...")
-        lesson = self.lesson_service.generate_lesson(subject, subtopic, level)
+        lesson = self.lesson_service.generate_lesson(subject, subtopic, level, callbacks=callbacks)
         lesson_context = self.lesson_service.extract_context(lesson)
         
         # 2. Create Coverage Plan
@@ -104,11 +126,11 @@ class EducationalContentOrchestrator:
             )
             
             # Generate initial question
-            question = self.question_service.generate_aligned(req, lesson_context)
+            question = self.question_service.generate_aligned(req, lesson_context, callbacks=callbacks)
             
             # Validate Alignment
             is_valid, errors = self.validation_service.validate_alignment(
-                question, lesson_context, mapping.target_concept
+                question, lesson_context, mapping.target_concept, callbacks=callbacks
             )
             
             # Revision Loop (Max 2 attempts)
@@ -116,10 +138,10 @@ class EducationalContentOrchestrator:
             while not is_valid and question.revision_count < max_revisions:
                 print(f"  [WARN] Validation failed: {errors}. Revising...")
                 question = self.question_service.revise_aligned(
-                    question, errors, lesson_context, req
+                    question, errors, lesson_context, req, callbacks=callbacks
                 )
                 is_valid, errors = self.validation_service.validate_alignment(
-                    question, lesson_context, mapping.target_concept
+                    question, lesson_context, mapping.target_concept, callbacks=callbacks
                 )
             
             if not is_valid:

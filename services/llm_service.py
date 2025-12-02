@@ -4,7 +4,10 @@ Implements retry logic and error handling for API calls.
 """
 import time
 import re
-from typing import List, Type, TypeVar
+import logging
+
+logger = logging.getLogger(__name__)
+from typing import List, Type, TypeVar, Any
 from pydantic import BaseModel, ValidationError
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import BaseMessage
@@ -37,13 +40,14 @@ class LLMService:
         )
         self.api_call_count = 0
     
-    def invoke_with_retry(self, messages: List[BaseMessage], max_retries: int = 3) -> str:
+    def invoke_with_retry(self, messages: List[BaseMessage], max_retries: int = 3, callbacks: List[Any] = None) -> str:
         """
         Invoke the LLM with automatic retry logic for handling rate limits and errors.
         
         Args:
             messages: List of messages to send to the LLM
             max_retries: Maximum number of retry attempts (default: 3)
+            callbacks: Optional list of callbacks (e.g., for LangFuse)
             
         Returns:
             The content of the LLM response
@@ -51,10 +55,14 @@ class LLMService:
         Raises:
             Exception: If all retry attempts fail
         """
+        config = {"callbacks": callbacks} if callbacks else {}
+        if callbacks:
+            logger.info(f"LLM Invoke with {len(callbacks)} callbacks")
+        
         for attempt in range(max_retries):
             try:
                 self.api_call_count += 1
-                response = self.llm.invoke(messages)
+                response = self.llm.invoke(messages, config=config)
                 return response.content
             except Exception as e:
                 error_msg = str(e)
@@ -108,7 +116,8 @@ class LLMService:
         self, 
         messages: List[BaseMessage], 
         response_model: Type[T],
-        max_retries: int = 3
+        max_retries: int = 3,
+        callbacks: List[Any] = None
     ) -> T:
         """
         Invoke with strict schema enforcement using LangChain's built-in structured output.
@@ -117,6 +126,7 @@ class LLMService:
             messages: List of messages to send to the LLM
             response_model: Pydantic model class for response validation
             max_retries: Maximum number of retry attempts (default: 3)
+            callbacks: Optional list of callbacks (e.g., for LangFuse)
             
         Returns:
             Validated Pydantic model instance
@@ -126,11 +136,12 @@ class LLMService:
         """
         # Use LangChain's native with_structured_output method
         structured_llm = self.llm.with_structured_output(response_model, method="json_schema")
+        config = {"callbacks": callbacks} if callbacks else {}
         
         for attempt in range(max_retries):
             try:
                 self.api_call_count += 1
-                result = structured_llm.invoke(messages)
+                result = structured_llm.invoke(messages, config=config)
                 return result
                 
             except ValidationError as e:

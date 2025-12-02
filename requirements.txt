@@ -8,3 +8,4 @@ python-dotenv
 langsmith>=0.4.38
 langchainhub
 langchain
+langfuse
