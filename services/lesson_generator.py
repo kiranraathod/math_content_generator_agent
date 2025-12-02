@@ -2,7 +2,7 @@
 Lesson Generation Service.
 Responsible for creating structured educational content using the LLM.
 """
-from typing import List, Dict
+from typing import List, Dict, Any
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from domain_models import LessonContent, LessonContext
@@ -18,7 +18,7 @@ class LessonGenerationService:
     def __init__(self, llm_service: LLMService):
         self.llm_service = llm_service
 
-    def generate_lesson(self, subject: str, subtopic: str, level: int) -> LessonContent:
+    def generate_lesson(self, subject: str, subtopic: str, level: int, callbacks: List[Any] = None) -> LessonContent:
         """
         Generate a complete lesson for the given subject and subtopic.
 
@@ -26,6 +26,7 @@ class LessonGenerationService:
             subject: The main subject (e.g., "Mathematics")
             subtopic: The specific topic (e.g., "Pythagorean Theorem")
             level: Difficulty level (1-6)
+            callbacks: Optional list of callbacks (e.g., for LangFuse)
 
         Returns:
             LessonContent: Structured lesson object
@@ -81,7 +82,8 @@ class LessonGenerationService:
         # Use structured output to ensure we get a valid LessonContent object
         lesson = self.llm_service.invoke_structured(
             messages=messages,
-            response_model=LessonContent
+            response_model=LessonContent,
+            callbacks=callbacks
         )
         
         return lesson

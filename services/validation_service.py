@@ -2,7 +2,7 @@
 Validation Service - Handles validation of questions and answers.
 Responsible for quality assurance of generated content.
 """
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from langchain_core.messages import HumanMessage, SystemMessage
 from domain_models import GeneratedQuestion, LessonContext, LessonContent
 from services.llm_service import LLMService
@@ -34,7 +34,8 @@ class ValidationService:
         self, 
         question: GeneratedQuestion, 
         lesson_context: LessonContext,
-        target_concept: str
+        target_concept: str,
+        callbacks: List[Any] = None
     ) -> tuple[bool, List[str]]:
         """
         Validate that the question aligns with the lesson content and target concept.
@@ -72,7 +73,7 @@ class ValidationService:
             HumanMessage(content=prompt)
         ]
         
-        response_content = self.llm_service.invoke_with_retry(messages)
+        response_content = self.llm_service.invoke_with_retry(messages, callbacks=callbacks)
         return self._parse_validation_response(response_content)
 
     def validate_coverage(

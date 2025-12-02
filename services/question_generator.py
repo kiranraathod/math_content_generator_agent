@@ -2,7 +2,7 @@
 Question Generation Service.
 Generates educational questions, supporting both standalone and lesson-aligned modes.
 """
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from domain_models import (
@@ -38,7 +38,8 @@ class QuestionGenerationService:
     def generate_aligned(
         self, 
         requirements: QuestionRequirements, 
-        lesson_context: LessonContext
+        lesson_context: LessonContext,
+        callbacks: List[Any] = None
     ) -> GeneratedQuestion:
         """
         Generate a question explicitly aligned with lesson content.
@@ -50,7 +51,7 @@ class QuestionGenerationService:
         Returns:
             GeneratedQuestion: The generated question with alignment metadata
         """
-        question = self._generate(requirements, context=lesson_context)
+        question = self._generate(requirements, context=lesson_context, callbacks=callbacks)
         
         # Post-generation metadata population
         if lesson_context:
@@ -64,7 +65,8 @@ class QuestionGenerationService:
     def _generate(
         self, 
         requirements: QuestionRequirements, 
-        context: Optional[LessonContext]
+        context: Optional[LessonContext],
+        callbacks: List[Any] = None
     ) -> GeneratedQuestion:
         """Internal generation logic."""
         
@@ -109,7 +111,8 @@ class QuestionGenerationService:
         # Use structured output for strict schema validation
         generated = self.llm_service.invoke_structured(
             messages=messages,
-            response_model=GeneratedQuestion
+            response_model=GeneratedQuestion,
+            callbacks=callbacks
         )
         
         # Enforce the requested question type to ensure consistency
@@ -164,7 +167,8 @@ CRITICAL: Create a concept-based Yes/No question.
         question: GeneratedQuestion,
         validation_errors: List[str],
         lesson_context: LessonContext,
-        requirements: QuestionRequirements
+        requirements: QuestionRequirements,
+        callbacks: List[Any] = None
     ) -> GeneratedQuestion:
         """
         Revise a question based on validation errors, maintaining lesson alignment.
@@ -208,7 +212,8 @@ CRITICAL: Create a concept-based Yes/No question.
         
         revised_question = self.llm_service.invoke_structured(
             messages=messages,
-            response_model=GeneratedQuestion
+            response_model=GeneratedQuestion,
+            callbacks=callbacks
         )
         
         # Update metadata

@@ -40,4 +40,5 @@ dependencies = [
     "blinker>=1.9.0",
     "langchainhub>=0.1.21",
     "langgraph-cli[inmem]>=0.4.7",
+    "langfuse>=3.10.1",
 ]
