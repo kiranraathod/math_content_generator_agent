@@ -9,7 +9,6 @@ from typing import List, Optional, Dict, Any
 
 from services import LLMService
 from services.config import MathGeneratorConfig
-from utils import ExportService
 
 # New Architecture Imports
 from services.orchestrator import EducationalContentOrchestrator
@@ -43,9 +42,6 @@ class MathQuestionGenerator:
         
         # Initialize core services
         self.llm_service = LLMService(api_key, model)
-        
-        # Initialize legacy export service
-        self.export_service = ExportService()
 
         # --- NEW ARCHITECTURE ---
         self.orchestrator = EducationalContentOrchestrator(self.llm_service)
