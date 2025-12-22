@@ -461,6 +461,24 @@ if st.session_state.generated_questions:
                     else:
                         st.markdown(f" {escape_markdown(option)}")
             
+            # Display Fill-in-the-Blank data if available
+            if question.get('type') == 'Fill-in-the-Blank' and question.get('blank_answers'):
+                blank_answers = question.get('blank_answers', [])
+                distractors = question.get('distractors', [])
+                
+                st.markdown("**Blank Answers:**")
+                cols = st.columns(len(blank_answers))
+                for i, (col, answer) in enumerate(zip(cols, blank_answers), 1):
+                    with col:
+                        st.success(f"Blank {i}: **{answer}**")
+                
+                if distractors:
+                    st.markdown("**Distractors (decoys):**")
+                    distractor_cols = st.columns(len(distractors))
+                    for col, distractor in zip(distractor_cols, distractors):
+                        with col:
+                            st.error(f"{distractor}")
+            
             st.markdown("**Solution:**")
             st.markdown(escape_markdown(question.get('solution', 'N/A')))
             

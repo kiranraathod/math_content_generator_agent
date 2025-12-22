@@ -26,6 +26,8 @@ class BloomLevel(str, Enum):
     CREATE = "Create"
 
 
+
+
 class DefinitionItem(BaseModel):
     """A single definition item."""
     term: str
@@ -102,6 +104,11 @@ class GeneratedQuestion(BaseModel):
     question_type: QuestionType = Field(..., description="Type of the question")
     options: Optional[List[str]] = None
     correct_option: Optional[str] = None
+    
+    # Fill-in-the-Blank specific data (using List for Gemini compatibility)
+    # blank_answers is ordered list of correct values for each blank (1-indexed by position)
+    blank_answers: Optional[List[str]] = Field(None, description="Ordered list of correct values for blanks 1, 2, 3, etc.")
+    distractors: Optional[List[str]] = Field(None, description="2-4 incorrect decoy options for fill-in-blank")
     
     # Metadata for alignment verification
     tests_concept: Optional[str] = Field(None, description="The concept this question tests")

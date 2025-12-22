@@ -144,6 +144,22 @@ CRITICAL: Create a concept-based Yes/No question.
 - The SOLUTION must detail the underlying theory/reasoning that leads to the conclusion
 - Suitable for ages 10-16
 """
+        elif req.question_type == QuestionType.FILL_IN_BLANK:
+            base_prompt += """
+CRITICAL: Create a Fill-in-the-Blank question with MULTIPLE BLANKS.
+- Use 2-6 blanks marked with "______" (six underscores) in the question text
+- Each blank tests a key value, term, or step in the problem
+- You MUST populate these fields:
+  * blank_answers: Ordered list of correct values, e.g. ["-2", "-5"] for blanks 1 and 2
+  * distractors: List of 2-4 plausible but incorrect values
+- The answer field should list all correct values comma-separated
+- Solution should explain how to find each blank value
+
+EXAMPLE:
+Question: "The equation a_n = ______ * (______)^(n-1) represents a geometric sequence."
+blank_answers: ["-2", "-5"]
+distractors: ["3", "10", "0"]
+"""
         elif req.question_type == QuestionType.MCQ:
             base_prompt += "\nIMPORTANT: Provide exactly 4 options (A-D). Solution must be a short conceptual explanation."
         
