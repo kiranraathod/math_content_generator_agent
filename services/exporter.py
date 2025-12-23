@@ -86,5 +86,6 @@ class ContentPackageExporter:
             "tests_concept": q.tests_concept,
             "uses_lesson_terminology": q.uses_lesson_terminology,
             "validation_status": q.validation_status,
-            "revision_count": q.revision_count
+            "revision_count": q.revision_count,
+            "prompt": q.prompt
         }

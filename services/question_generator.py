@@ -119,7 +119,8 @@ class QuestionGenerationService:
         return generated.model_copy(update={
             "question_type": requirements.question_type,
             "subject": requirements.subject,
-            "subtopic": requirements.subtopic
+            "subtopic": requirements.subtopic,
+            "prompt": user_prompt  # Store the prompt for debugging
         })
 
     def _build_prompt(

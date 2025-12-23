@@ -115,6 +115,7 @@ class GeneratedQuestion(BaseModel):
     uses_lesson_terminology: bool = Field(False, description="Whether lesson terms were used")
     validation_status: bool = Field(False, description="Whether validation passed")
     revision_count: int = Field(0, description="Number of revisions needed")
+    prompt: Optional[str] = Field(None, description="The prompt used to generate this question")
 
 
 class ConceptMapping(BaseModel):
