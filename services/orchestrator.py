@@ -20,12 +20,13 @@ from services.llm_service import LLMService
 from services.lesson_generator import LessonGenerationService
 from services.concept_mapper import ConceptMappingService
 from services.question_generator import QuestionGenerationService
-from services.question_generator import QuestionGenerationService
 from services.validation_service import ValidationService
 try:
     from langfuse.langchain import CallbackHandler
+    from langfuse import get_client
 except ImportError:
     CallbackHandler = None
+    get_client = None
 
 
 class EducationalContentOrchestrator:
@@ -63,7 +64,7 @@ class EducationalContentOrchestrator:
         """
         start_time = time.time()
         
-        # Initialize LangFuse Callback
+        # Initialize LangFuse Callback with trace naming for better UI identification
         callbacks = []
         if CallbackHandler:
             try:
@@ -167,6 +168,14 @@ class EducationalContentOrchestrator:
             "total_api_calls": self.llm_service.get_api_call_count(),
             "coverage_report": coverage_report
         }
+        
+        # Flush Langfuse traces before returning (SDK v3 pattern)
+        if get_client:
+            try:
+                get_client().flush()
+                logger.info("✅ LangFuse traces flushed successfully.")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to flush LangFuse traces: {e}")
         
         return EducationalContent(
             lesson=lesson,
