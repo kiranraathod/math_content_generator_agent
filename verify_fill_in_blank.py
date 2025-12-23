@@ -40,12 +40,12 @@ def main():
     print(f"Solution: {question.solution}")
     print()
     
-    if question.blank_answers:
+    if question.correct_answers:
         print("Fill-in-Blank Data:")
-        print(f"  Blank Answers ({len(question.blank_answers)}):")
-        for i, val in enumerate(question.blank_answers, 1):
-            print(f"    - Blank {i}: {val}")
-        print(f"  Distractors: {question.distractors}")
+        print(f"  Correct Answers ({len(question.correct_answers)}):")
+        for i, val in enumerate(question.correct_answers, 1):
+            print(f"    - [{i}]: {val}")
+        print(f"  Decoy Answers: {question.decoy_answers}")
     else:
         print("NOTE: blank_answers is None (may be expected for non-FILL_IN_BLANK types)")
     

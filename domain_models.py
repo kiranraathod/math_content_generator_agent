@@ -106,15 +106,16 @@ class GeneratedQuestion(BaseModel):
     correct_option: Optional[str] = None
     
     # Fill-in-the-Blank specific data (using List for Gemini compatibility)
-    # blank_answers is ordered list of correct values for each blank (1-indexed by position)
-    blank_answers: Optional[List[str]] = Field(None, description="Ordered list of correct values for blanks 1, 2, 3, etc.")
-    distractors: Optional[List[str]] = Field(None, description="2-4 incorrect decoy options for fill-in-blank")
+    # correct_answers is ordered list of correct values matching blanks [1], [2], etc.
+    correct_answers: Optional[List[str]] = Field(None, description="Ordered list of correct values for blanks [1], [2], [3], etc.")
+    decoy_answers: Optional[List[str]] = Field(None, description="At least 5 plausible but incorrect decoy options")
     
     # Metadata for alignment verification
     tests_concept: Optional[str] = Field(None, description="The concept this question tests")
     uses_lesson_terminology: bool = Field(False, description="Whether lesson terms were used")
     validation_status: bool = Field(False, description="Whether validation passed")
     revision_count: int = Field(0, description="Number of revisions needed")
+    prompt: Optional[str] = Field(None, description="The prompt used to generate this question")
 
 
 class ConceptMapping(BaseModel):

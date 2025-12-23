@@ -119,7 +119,8 @@ class QuestionGenerationService:
         return generated.model_copy(update={
             "question_type": requirements.question_type,
             "subject": requirements.subject,
-            "subtopic": requirements.subtopic
+            "subtopic": requirements.subtopic,
+            "prompt": user_prompt  # Store the prompt for debugging
         })
 
     def _build_prompt(
@@ -146,19 +147,23 @@ CRITICAL: Create a concept-based Yes/No question.
 """
         elif req.question_type == QuestionType.FILL_IN_BLANK:
             base_prompt += """
-CRITICAL: Create a Fill-in-the-Blank question with MULTIPLE BLANKS.
-- Use 2-6 blanks marked with "______" (six underscores) in the question text
-- Each blank tests a key value, term, or step in the problem
-- You MUST populate these fields:
-  * blank_answers: Ordered list of correct values, e.g. ["-2", "-5"] for blanks 1 and 2
-  * distractors: List of 2-4 plausible but incorrect values
-- The answer field should list all correct values comma-separated
-- Solution should explain how to find each blank value
+CRITICAL: Create a CONCISE Fill-in-the-Blank question with 2-6 blanks.
+
+FORMAT RULES:
+1. Use [1], [2], [3], etc. to mark blanks (NOT underscores)
+2. Keep the question SHORT - maximum 2 sentences
+3. Each blank should test a key value, term, or mathematical element
+
+OUTPUT REQUIREMENTS:
+- correct_answers: Ordered list matching [1], [2], [3], etc.
+- decoy_answers: At least 5 plausible wrong answers (mix of numbers, expressions, sign changes)
+- answer: All correct values comma-separated
+- solution: Brief explanation of each blank
 
 EXAMPLE:
-Question: "The equation a_n = ______ * (______)^(n-1) represents a geometric sequence."
-blank_answers: ["-2", "-5"]
-distractors: ["3", "10", "0"]
+Question: "For the sequence -2, 10, -50, ..., the first term is [1] and the common ratio is [2]."
+correct_answers: ["-2", "-5"]
+decoy_answers: ["2", "5", "-10", "10", "0.5", "-0.5"]
 """
         elif req.question_type == QuestionType.MCQ:
             base_prompt += "\nIMPORTANT: Provide exactly 4 options (A-D). Solution must be a short conceptual explanation."
