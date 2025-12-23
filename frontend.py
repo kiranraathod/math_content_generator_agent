@@ -1,5 +1,6 @@
 import streamlit as st
 import json
+import random
 from dotenv import load_dotenv
 from backend import MathQuestionGenerator
 from subjects_config import get_subjects, get_subtopics
@@ -462,22 +463,44 @@ if st.session_state.generated_questions:
                         st.markdown(f" {escape_markdown(option)}")
             
             # Display Fill-in-the-Blank data if available
-            if question.get('type') == 'Fill-in-the-Blank' and question.get('blank_answers'):
-                blank_answers = question.get('blank_answers', [])
-                distractors = question.get('distractors', [])
+            if question.get('type') == 'Fill-in-the-Blank' and question.get('correct_answers'):
+                correct_answers = question.get('correct_answers', [])
+                decoy_answers = question.get('decoy_answers', [])
                 
-                st.markdown("**Blank Answers:**")
-                cols = st.columns(len(blank_answers))
-                for i, (col, answer) in enumerate(zip(cols, blank_answers), 1):
-                    with col:
-                        st.success(f"Blank {i}: **{answer}**")
+                # Combine and shuffle for Word Bank
+                all_options = correct_answers + decoy_answers
+                # Use deterministic shuffle based on question text to keep order stable during re-runs
+                rng = random.Random(str(question.get('question', '')))
+                rng.shuffle(all_options)
                 
-                if distractors:
-                    st.markdown("**Distractors (decoys):**")
-                    distractor_cols = st.columns(len(distractors))
-                    for col, distractor in zip(distractor_cols, distractors):
-                        with col:
-                            st.error(f"{distractor}")
+                st.markdown("### 🔤 Word Bank")
+                st.info("Drag and drop these terms (mental check) logic:")
+                
+                # specific css for chip-like display
+                st.markdown("""
+                <style>
+                .word-bank-item {
+                    display: inline-block;
+                    background-color: #e9ecef;
+                    padding: 5px 10px;
+                    margin: 5px;
+                    border-radius: 15px;
+                    border: 1px solid #ced4da;
+                    font-weight: 500;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
+                # Display as chips
+                chips_html = ""
+                for opt in all_options:
+                    chips_html += f'<span class="word-bank-item">{escape_markdown(str(opt))}</span>'
+                st.markdown(chips_html, unsafe_allow_html=True)
+                
+                # Display correct key separately (hidden by default or small)
+                with st.expander("Show Answer Key"):
+                    for i, ans in enumerate(correct_answers, 1):
+                         st.markdown(f"**[{i}]**: {escape_markdown(str(ans))}")
             
             st.markdown("**Solution:**")
             st.markdown(escape_markdown(question.get('solution', 'N/A')))

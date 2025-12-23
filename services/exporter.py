@@ -81,6 +81,8 @@ class ContentPackageExporter:
             "type": q.question_type.value,
             "options": q.options,
             "correct_option": q.correct_option,
+            "correct_answers": q.correct_answers,
+            "decoy_answers": q.decoy_answers,
             "tests_concept": q.tests_concept,
             "uses_lesson_terminology": q.uses_lesson_terminology,
             "validation_status": q.validation_status,
