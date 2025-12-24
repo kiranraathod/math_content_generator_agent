@@ -40,14 +40,14 @@ def main():
     print(f"Solution: {question.solution}")
     print()
     
-    if question.correct_answers:
-        print("Fill-in-Blank Data:")
-        print(f"  Correct Answers ({len(question.correct_answers)}):")
-        for i, val in enumerate(question.correct_answers, 1):
-            print(f"    - [{i}]: {val}")
-        print(f"  Decoy Answers: {question.decoy_answers}")
+    if question.drag_options:
+        print("Equation Builder Data:")
+        print(f"  Correct Expression: {question.correct_expression}")
+        print(f"  Blanks Version:     {question.blanks_version}")
+        print(f"  Blank Values:       {question.blank_values}")
+        print(f"  Drag Options:       {question.drag_options}")
     else:
-        print("NOTE: blank_answers is None (may be expected for non-FILL_IN_BLANK types)")
+        print("NOTE: drag_options is None (may be expected for non-EQUATION types)")
     
     print("-" * 50)
     print("Verification complete!")
