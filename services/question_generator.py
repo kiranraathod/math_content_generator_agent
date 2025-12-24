@@ -147,23 +147,30 @@ CRITICAL: Create a concept-based Yes/No question.
 """
         elif req.question_type == QuestionType.FILL_IN_BLANK:
             base_prompt += """
-CRITICAL: Create a CONCISE Fill-in-the-Blank question with 2-6 blanks.
+CRITICAL: Create a Drag-and-Drop Equation Builder question.
 
-FORMAT RULES:
-1. Use [1], [2], [3], etc. to mark blanks (NOT underscores)
-2. Keep the question SHORT - maximum 2 sentences
-3. Each blank should test a key value, term, or mathematical element
+INSTRUCTIONS:
+1. Create a Word Problem or Concept Question.
+2. Formulate the CORRECT MATHEMATICAL EXPRESSION (Answer) using only numbers, operators (+ - * / =), and variables. NO WORDS.
+3. Create a BLANKS VERSION by replacing key parts (numbers, variables, operators) with '_'. Keep structure readable.
+4. Generate DRAG OPTIONS:
+   - Must include ALL missing pieces to fill the blanks.
+   - Must include EXACTLY 4 distractor options (plausible but wrong math symbols/numbers).
+   - Shuffle them.
 
 OUTPUT REQUIREMENTS:
-- correct_answers: Ordered list matching [1], [2], [3], etc.
-- decoy_answers: At least 5 plausible wrong answers (mix of numbers, expressions, sign changes)
-- answer: All correct values comma-separated
-- solution: Brief explanation of each blank
+- correct_expression: The full correct math expression (e.g. "2x + 5 = 15")
+- blanks_version: Expression with underscores (e.g. "2x + _ = 15")
+- drag_options: List of ALL options including correct ones and 4 decoys [ "5", "+", "-", "3", "10", "x" ]
+- blank_values: List of the correct values corresponding to the blanks in order (e.g. ["5"])
+- solution: Explain the steps to derive the equation.
 
 EXAMPLE:
-Question: "For the sequence -2, 10, -50, ..., the first term is [1] and the common ratio is [2]."
-correct_answers: ["-2", "-5"]
-decoy_answers: ["2", "5", "-10", "10", "0.5", "-0.5"]
+Question: "Twice a number increased by 5 equals 15."
+correct_expression: "2x + 5 = 15"
+blanks_version: "2x + _ = _"
+drag_options: ["5", "15", "10", "-", "3", "y"]
+blank_values: ["5", "15"]
 """
         elif req.question_type == QuestionType.MCQ:
             base_prompt += "\nIMPORTANT: Provide exactly 4 options (A-D). Solution must be a short conceptual explanation."

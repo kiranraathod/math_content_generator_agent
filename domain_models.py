@@ -105,10 +105,12 @@ class GeneratedQuestion(BaseModel):
     options: Optional[List[str]] = None
     correct_option: Optional[str] = None
     
-    # Fill-in-the-Blank specific data (using List for Gemini compatibility)
-    # correct_answers is ordered list of correct values matching blanks [1], [2], etc.
-    correct_answers: Optional[List[str]] = Field(None, description="Ordered list of correct values for blanks [1], [2], [3], etc.")
-    decoy_answers: Optional[List[str]] = Field(None, description="At least 5 plausible but incorrect decoy options")
+    
+    # Equation Builder specific data
+    correct_expression: Optional[str] = Field(None, description="The full correct mathematical expression")
+    blanks_version: Optional[str] = Field(None, description="The expression with specific parts replaced by blanks (_)")
+    drag_options: Optional[List[str]] = Field(None, description="Shuffled list containing correct parts and 4 plausible decoys")
+    blank_values: Optional[List[str]] = Field(None, description="The correct values for the blanks in order")
     
     # Metadata for alignment verification
     tests_concept: Optional[str] = Field(None, description="The concept this question tests")
