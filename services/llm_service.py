@@ -36,24 +36,25 @@ class LLMService:
         self.llm = ChatGoogleGenerativeAI(
             model=model,
             temperature=temperature,
-            google_api_key=api_key
+            google_api_key=api_key,
+            max_retries=6, # Increase internal retries for free tier
         )
         self.api_call_count = 0
-    
+        self.last_call_time = 0
+        self.min_interval = 4.0 # 4 seconds between calls (~15 RPM)
+        
+    def _wait_for_rate_limit(self):
+        """Enforce minimum interval between API calls."""
+        elapsed = time.time() - self.last_call_time
+        if elapsed < self.min_interval:
+            wait_time = self.min_interval - elapsed
+            logger.info(f"Rate limiting: Waiting {wait_time:.2f}s...")
+            time.sleep(wait_time)
+        self.last_call_time = time.time()
+
     def invoke_with_retry(self, messages: List[BaseMessage], max_retries: int = 3, callbacks: List[Any] = None) -> str:
         """
         Invoke the LLM with automatic retry logic for handling rate limits and errors.
-        
-        Args:
-            messages: List of messages to send to the LLM
-            max_retries: Maximum number of retry attempts (default: 3)
-            callbacks: Optional list of callbacks (e.g., for LangFuse)
-            
-        Returns:
-            The content of the LLM response
-            
-        Raises:
-            Exception: If all retry attempts fail
         """
         config = {"callbacks": callbacks} if callbacks else {}
         if callbacks:
@@ -61,6 +62,7 @@ class LLMService:
         
         for attempt in range(max_retries):
             try:
+                self._wait_for_rate_limit()
                 self.api_call_count += 1
                 response = self.llm.invoke(messages, config=config)
                 return response.content
@@ -70,11 +72,9 @@ class LLMService:
                 # Handle rate limiting (429 errors)
                 if "429" in error_msg or "ResourceExhausted" in error_msg:
                     retry_seconds = self._calculate_retry_delay(error_msg, attempt)
-                    
-                    if attempt < max_retries - 1:
-                        print(f"Rate limit hit. Waiting {retry_seconds} seconds before retry {attempt + 1}/{max_retries}...")
-                        time.sleep(retry_seconds)
-                        continue
+                    print(f"Rate limit hit. Waiting {retry_seconds} seconds before retry {attempt + 1}/{max_retries}...")
+                    time.sleep(retry_seconds)
+                    continue
                 
                 # Handle other errors with exponential backoff
                 if attempt < max_retries - 1:
@@ -83,7 +83,7 @@ class LLMService:
                     time.sleep(wait_time)
                 else:
                     raise Exception(f"Failed after {max_retries} attempts: {error_msg}")
-    
+
     def _calculate_retry_delay(self, error_msg: str, attempt: int) -> int:
         """
         Calculate retry delay based on error message or exponential backoff.
@@ -111,7 +111,7 @@ class LLMService:
             Total API call count
         """
         return self.api_call_count
-    
+
     def invoke_structured(
         self, 
         messages: List[BaseMessage], 
@@ -121,18 +121,6 @@ class LLMService:
     ) -> T:
         """
         Invoke with strict schema enforcement using LangChain's built-in structured output.
-        
-        Args:
-            messages: List of messages to send to the LLM
-            response_model: Pydantic model class for response validation
-            max_retries: Maximum number of retry attempts (default: 3)
-            callbacks: Optional list of callbacks (e.g., for LangFuse)
-            
-        Returns:
-            Validated Pydantic model instance
-            
-        Raises:
-            ValueError: If validation fails after all retries
         """
         # Use LangChain's native with_structured_output method
         structured_llm = self.llm.with_structured_output(response_model, method="json_schema")
@@ -140,6 +128,7 @@ class LLMService:
         
         for attempt in range(max_retries):
             try:
+                self._wait_for_rate_limit()
                 self.api_call_count += 1
                 result = structured_llm.invoke(messages, config=config)
                 return result
@@ -150,3 +139,13 @@ class LLMService:
                     time.sleep(2 ** attempt)
                 else:
                     raise ValueError(f"Schema validation failed after {max_retries} attempts: {e}")
+            except Exception as e:
+                # Catch ResourceExhausted here too since invoke might raise it
+                error_msg = str(e)
+                if "429" in error_msg or "ResourceExhausted" in error_msg:
+                    if attempt < max_retries - 1:
+                        retry_seconds = self._calculate_retry_delay(error_msg, attempt)
+                        print(f"Rate limit hit (structured). Waiting {retry_seconds}s...")
+                        time.sleep(retry_seconds)
+                        continue
+                raise e
