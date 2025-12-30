@@ -98,6 +98,7 @@ class QuestionGenerationService:
           1. MUST have exactly 4 options labeled A., B., C., D.
           2. Correct Option must be the single letter (A, B, C, or D).
           3. Solution must be a 1-2 line CONCEPTUAL explanation (do NOT use numbered steps).
+          4. FAILURE TO PROVIDE 4 OPTIONS WILL CAUSE SYSTEM ERROR.
         """
         
         # Build the prompt based on whether we have context
