@@ -119,6 +119,19 @@ class GeneratedQuestion(BaseModel):
     revision_count: int = Field(0, description="Number of revisions needed")
     prompt: Optional[str] = Field(None, description="The prompt used to generate this question")
 
+    @model_validator(mode='after')
+    def validate_mcq_options(self) -> 'GeneratedQuestion':
+        if self.question_type == QuestionType.MCQ:
+            if not self.options or len(self.options) != 4:
+                raise ValueError("MCQ questions must have exactly 4 options.")
+            
+            # Ensure correct_option is valid
+            if self.correct_option:
+                valid_options = ["A", "B", "C", "D"]
+                if self.correct_option not in valid_options and self.correct_option not in self.options:
+                     raise ValueError(f"Correct option '{self.correct_option}' must be A, B, C, D or one of the options.")
+        return self
+
 
 class ConceptMapping(BaseModel):
     """
