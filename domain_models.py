@@ -132,6 +132,30 @@ class GeneratedQuestion(BaseModel):
                      raise ValueError(f"Correct option '{self.correct_option}' must be A, B, C, D or one of the options.")
         return self
 
+    @model_validator(mode='after')
+    def validate_fib_fields(self) -> 'GeneratedQuestion':
+        """
+        Enforce structure for Fill-in-the-Blank (Equation Builder) questions.
+        """
+        if self.question_type == QuestionType.FILL_IN_BLANK:
+            missing_fields = []
+            if not self.correct_expression: missing_fields.append("correct_expression")
+            if not self.blanks_version: missing_fields.append("blanks_version")
+            if not self.drag_options: missing_fields.append("drag_options")
+            if not self.blank_values: missing_fields.append("blank_values")
+            
+            if missing_fields:
+                raise ValueError(f"Fill-in-the-Blank questions must have: {', '.join(missing_fields)}")
+            
+            # Ensure at least one blank and sufficient options
+            if "_" not in self.blanks_version:
+                raise ValueError("blanks_version must contain at least one '_' placeholder.")
+                
+            if len(self.drag_options) < 2:
+                raise ValueError("drag_options must have at least 2 items (target + distractor).")
+                
+        return self
+
 
 class ConceptMapping(BaseModel):
     """

@@ -252,7 +252,8 @@ blank_values: ["5", "15"]
             "subtopic": requirements.subtopic,
             "tests_concept": requirements.target_concept,
             "uses_lesson_terminology": self._check_terminology_usage(revised_question, lesson_context.definitions),
-            "revision_count": question.revision_count + 1
+            "revision_count": question.revision_count + 1,
+            "prompt": question.prompt or "Prompt lost during revision" # Preserve original prompt or add fallback
         })
 
     def _check_terminology_usage(self, question: GeneratedQuestion, definitions: Dict[str, str]) -> bool:
