@@ -151,8 +151,11 @@ class GeneratedQuestion(BaseModel):
             if "_" not in self.blanks_version:
                 raise ValueError("blanks_version must contain at least one '_' placeholder.")
                 
-            if len(self.drag_options) < 2:
-                raise ValueError("drag_options must have at least 2 items (target + distractor).")
+            if len(self.drag_options) < 5:
+                raise ValueError("drag_options must have at least 5 items (correct answer(s) + 4 distractors).")
+
+            if any(not str(opt).strip() for opt in self.drag_options):
+                 raise ValueError("drag_options cannot contain empty strings.")
                 
         return self
 

@@ -150,28 +150,27 @@ CRITICAL: Create a concept-based Yes/No question.
             base_prompt += """
 CRITICAL: Create a Drag-and-Drop Equation Builder question.
 
+
 INSTRUCTIONS:
 1. Create a Word Problem or Concept Question.
-2. Formulate the CORRECT MATHEMATICAL EXPRESSION (Answer) using only numbers, operators (+ - * / =), and variables. NO WORDS.
-3. Create a BLANKS VERSION by replacing key parts (numbers, variables, operators) with '_'. Keep structure readable.
+2. Formulate the CORRECT MATHEMATICAL EXPRESSION (Answer).
+3. Create a BLANKS VERSION by replacing key parts with '_'.
 4. Generate DRAG OPTIONS:
-   - Must include ALL missing pieces to fill the blanks.
-   - Must include EXACTLY 4 distractor options (plausible but wrong math symbols/numbers).
+   - Must include ALL missing pieces from the blanks.
+   - Must include EXACTLY 4 distractor options (plausible but wrong).
    - Shuffle them.
+   - NO empty strings.
 
-OUTPUT REQUIREMENTS:
-- correct_expression: The full correct math expression (e.g. "2x + 5 = 15")
-- blanks_version: Expression with underscores (e.g. "2x + _ = 15")
-- drag_options: List of ALL options including correct ones and 4 decoys [ "5", "+", "-", "3", "10", "x" ]
-- blank_values: List of the correct values corresponding to the blanks in order (e.g. ["5"])
-- solution: Explain the steps to derive the equation.
+OUTPUT REQUIREMENTS (JSON format):
+- correct_expression: "2x + 5 = 15"
+- blanks_version: "2x + _ = _"
+- drag_options: ["5", "15", "10", "-", "3", "y"]  (All correct values + 4 distractors)
+- blank_values: ["5", "15"] (The values for the underscores)
+- solution: "Twice a number (2x) plus 5 is 15..."
 
-EXAMPLE:
-Question: "Twice a number increased by 5 equals 15."
-correct_expression: "2x + 5 = 15"
-blanks_version: "2x + _ = _"
-drag_options: ["5", "15", "10", "-", "3", "y"]
-blank_values: ["5", "15"]
+CRITICAL:
+- Do NOT create Multiple Choice (A, B, C, D).
+- Ensure drag_options has at least 5 items.
 """
         elif req.question_type == QuestionType.MCQ:
             base_prompt += "\nIMPORTANT: Provide exactly 4 options (A-D). Solution must be a short conceptual explanation."
