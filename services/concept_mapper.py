@@ -40,11 +40,13 @@ class ConceptMappingService:
         # 3. Progress Bloom's levels: Remember -> Understand -> Apply -> Analyze
         
         # Define progression of Bloom's levels
+        # Define progression of Bloom's levels
+        # For Math, we prioritize Application and Analysis over simple Recall (definitions)
         bloom_progression = [
-            BloomLevel.REMEMBER,
-            BloomLevel.UNDERSTAND,
-            BloomLevel.APPLY,
-            BloomLevel.ANALYZE
+            BloomLevel.APPLY,        # Start with doing
+            BloomLevel.APPLY,        # Reinforce doing
+            BloomLevel.ANALYZE,      # Analyze relationships
+            BloomLevel.UNDERSTAND    # Check conceptual understanding (Yes/No)
         ]
         
         for i in range(num_questions):
