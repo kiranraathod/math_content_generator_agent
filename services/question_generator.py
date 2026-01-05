@@ -150,27 +150,42 @@ CRITICAL: Create a concept-based Yes/No question.
             base_prompt += """
 CRITICAL: Create a Drag-and-Drop Equation Builder question.
 
+Input:
+- A mathematical question.
 
-INSTRUCTIONS:
-1. Create a Word Problem or Concept Question.
-2. Formulate the CORRECT MATHEMATICAL EXPRESSION (Answer).
-3. Create a BLANKS VERSION by replacing key parts with '_'.
-4. Generate DRAG OPTIONS:
-   - Must include ALL missing pieces from the blanks.
-   - Must include EXACTLY 4 distractor options (plausible but wrong).
-   - Shuffle them.
-   - NO empty strings.
+Your tasks:
+1. Solve the question to get the correct final answer.
+2. Ensure the answer is a valid mathematical expression using only:
+   - numbers
+   - operators (+ − × ÷ =)
+   - variables (single-letter or short variable groups like ts, hy)
+   - no words.
+3. Convert the correct answer into a fill-in-the-blanks equation by:
+   - Replacing selected characters or groups (variables, operators, constants) with blanks (_)
+   - The structure of the equation must remain readable.
+4. Count the number of blanks created.
+5. Generate draggable option blocks such that:
+   - All correct pieces needed to fill the blanks are included.
+   - Exactly 4 extra incorrect but plausible mathematical blocks are added.
+   - Extra options may include:
+     - unused variables
+     - wrong operators
+     - incorrect constants
+   - No words allowed in options.
+6. Shuffle the options randomly.
 
-OUTPUT REQUIREMENTS (JSON format):
-- correct_expression: "2x + 5 = 15"
-- blanks_version: "2x + _ = _"
-- drag_options: ["5", "15", "10", "-", "3", "y"]  (All correct values + 4 distractors)
-- blank_values: ["5", "15"] (The values for the underscores)
-- solution: "Twice a number (2x) plus 5 is 15..."
+Output format (strictly follow JSON structure):
+- correct_expression: <full mathematical expression> e.g. "2x + 5 = 15"
+- blanks_version: <equation with blanks> e.g. "2x + _ = _"
+- drag_options: <list of strings> e.g. ["5", "15", "10", "-", "3", "y"]
+- blank_values: <list of strings> e.g. ["5", "15"]
+- solution: Explain the steps to derive the equation.
 
-CRITICAL:
-- Do NOT create Multiple Choice (A, B, C, D).
-- Ensure drag_options has at least 5 items.
+Rules:
+- Do NOT explain steps in the question text.
+- Do NOT include any text outside the specified sections.
+- Keep expressions concise and mathematically valid.
+- NO WORDS in correct_expression or drag_options.
 """
         elif req.question_type == QuestionType.MCQ:
             base_prompt += "\nIMPORTANT: Provide exactly 4 options (A-D). Solution must be a short conceptual explanation."
@@ -225,6 +240,7 @@ CRITICAL:
         Validation Errors to Fix:
         {validation_errors}
         
+
         ALIGNMENT REQUIREMENTS:
         1. Target Concept: {requirements.target_concept}
         2. Terminology: {list(lesson_context.definitions.keys())}
@@ -232,6 +248,28 @@ CRITICAL:
         
         Rewrite the question and solution to fix the errors and ensure alignment.
         """
+        
+        # Inject structural instructions for specific types
+        if requirements.question_type == QuestionType.FILL_IN_BLANK:
+            user_prompt += """
+            
+            CRITICAL FORMAT INSTRUCTIONS for Fill-in-the-Blank:
+            1. Formulate the CORRECT MATHEMATICAL EXPRESSION (Answer).
+               - numbers, operators, variables ONLY. NO WORDS.
+            2. Create a BLANKS VERSION by replacing key parts with '_'.
+            3. Generate DRAG OPTIONS:
+               - Must include ALL missing pieces from the blanks.
+               - Must include EXACTLY 4 distractor options (plausible but wrong).
+               - Shuffle them.
+               - NO empty strings.
+               - NO WORDS in options.
+               - Do NOT create Multiple Choice (A, B, C, D).
+
+            ensure you populate the JSON fields: "correct_expression", "blanks_version", "drag_options", "blank_values".
+            
+            """
+        elif requirements.question_type == QuestionType.MCQ:
+            user_prompt += "\nENSURE you provide exactly 4 options (A-D) and set 'correct_option'."
         
         messages = [
             SystemMessage(content=system_prompt),
