@@ -435,6 +435,19 @@ if st.session_state.generated_questions:
             for idx, (tab, screen) in enumerate(zip(screen_tabs, screens)):
                 with tab:
                     # Display screen content
+                    
+                    # 1. Catchy Heading (Yellow highlight style)
+                    if screen.get('heading'):
+                        st.markdown(f"""
+                        <div style="background-color: #fff3cd; padding: 5px 10px; border-radius: 5px; display: inline-block; margin-bottom: 10px;">
+                            <h3 style="margin: 0; color: #856404;">{escape_markdown(screen.get('heading'))}</h3>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                    # 2. Conversational Subheading (Italic/Bold connector)
+                    if screen.get('subheading'):
+                        st.markdown(f"**_{escape_markdown(screen.get('subheading'))}_**")
+                        
                     st.markdown(escape_markdown(screen.get('content', '')))
                     
                     # Show key term if present

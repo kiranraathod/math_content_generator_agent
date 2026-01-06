@@ -38,6 +38,8 @@ class DefinitionItem(BaseModel):
 class LessonScreen(BaseModel):
     """A single screen in a mobile-friendly lesson."""
     screen_number: int = Field(..., description="Screen order (1-indexed)")
+    heading: str = Field(..., description="Catchy, short heading (e.g. 'But wait!')")
+    subheading: str = Field(..., description="Conversational subheading (e.g. 'Imagine this...')")
     content: str = Field(..., description="1-3 sentences for this screen")
     key_term: Optional[str] = Field(None, description="Key term introduced in this screen")
 
