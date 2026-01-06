@@ -46,6 +46,36 @@ class MathQuestionGenerator:
         # --- NEW ARCHITECTURE ---
         self.orchestrator = EducationalContentOrchestrator(self.llm_service)
         self.package_exporter = ContentPackageExporter()
+        
+        # LangGraph Service (Phase 4 Integration)
+        from services.graph_workflow import EducationalContentGraph
+        self.graph_service = EducationalContentGraph(self.llm_service)
+
+    async def generate_with_graph_stream(
+        self,
+        subject: str,
+        subtopic: str,
+        question_distribution: dict,
+        level: int = 1,
+        thread_id: str = None
+    ):
+        """
+        Async generator that yields status updates from the LangGraph execution.
+        """
+        inputs = {
+            "subject": subject,
+            "subtopic": subtopic,
+            "level": level,
+            "question_distribution": question_distribution
+        }
+        
+        config = {"recursion_limit": 50}
+        if thread_id:
+            config["configurable"] = {"thread_id": thread_id}
+            
+        # Stream events from the graph
+        async for event in self.graph_service.app.astream(inputs, config=config):
+            yield event
     
     # Legacy generate_question method removed - dependencies (QuestionService, WorkflowOrchestrator) deleted
     # Use generate_questions_batch with generate_lesson=True for new functionality
@@ -89,6 +119,12 @@ class MathQuestionGenerator:
             "Legacy question generation without lessons is no longer supported. "
             "Please use generate_lesson=True to use the new orchestrator."
         )
+
+    def format_content_package(self, content_package):
+        """
+        Helper to format the domain model for the frontend using the exporter.
+        """
+        return self.package_exporter.to_frontend_format(content_package)
 
     def export_to_json(self, data: Any, filename: str = "questions.json") -> str:
         """

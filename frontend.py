@@ -1,3 +1,5 @@
+import asyncio
+import uuid
 import streamlit as st
 import json
 import random
@@ -20,6 +22,62 @@ def escape_markdown(text: str) -> str:
     if not text:
         return ""
     return str(text).replace("$", "&#36;") 
+
+async def run_generation_stream(generator, subject, subtopic, distribution, level, status_container):
+    """
+    Consumes the async stream from the backend and updates the UI in real-time.
+    """
+    final_data = None
+    thread_id = str(uuid.uuid4())
+    
+    status_container.write(f"Created session: {thread_id}")
+    
+    async for event in generator.generate_with_graph_stream(
+        subject=subject,
+        subtopic=subtopic,
+        question_distribution=distribution,
+        level=level,
+        thread_id=thread_id
+    ):
+        # Handle Graph Events
+        if "generate_lesson" in event:
+            status_container.update(label="📚 Lesson Generated!", state="running")
+            status_container.write("Lesson content created. Extracting context...")
+            
+        elif "plan_coverage" in event:
+            plan = event["plan_coverage"].get("question_plan", [])
+            status_container.update(label=f"🗺️ Coverage Planned: {len(plan)} Questions", state="running")
+            status_container.write(f"Plan: {[q.target_concept for q in plan]}")
+            
+        elif "generate_single_question" in event:
+            q_data = event["generate_single_question"]
+            if q_data.get("current_question"):
+                status_container.write("Generated initial question draft...")
+            
+        elif "validate_question" in event:
+            val_data = event["validate_question"]
+            is_valid = val_data.get("validation_status")
+            if is_valid:
+                status_container.write("✅ Validation Passed")
+            else:
+                status_container.write(f"⚠️ Validation Failed: {val_data.get('validation_errors')}")
+                
+        elif "revise_question" in event:
+            rev_count = event["revise_question"].get("revision_count")
+            status_container.update(label=f"🔄 Revising Question (Attempt {rev_count})", state="running")
+            status_container.write("Applying corrections...")
+            
+        elif "save_question" in event:
+            status_container.write("💾 Question Saved.")
+            
+        elif "finalize" in event:
+            status_container.update(label="✨ Finalizing Package...", state="complete")
+            final_content = event["finalize"].get("final_package")
+            if final_content:
+                # Format for frontend
+                final_data = generator.format_content_package(final_content)
+    
+    return final_data
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -307,37 +365,45 @@ if generate_btn:
         st.error("Question type counts must sum to the Total Number of Questions")
     else:
         try:
-            with st.spinner(f"Generating lesson and {calculated_total} questions... (This may take a moment)"):
+            # Initialize generator
+            generator = MathQuestionGenerator(api_key=api_key, model=model)
+            
+            question_distribution = {}
+            if mcq_count > 0:
+                question_distribution["MCQ"] = mcq_count
+            if fill_blank_count > 0:
+                question_distribution["Fill-in-the-Blank"] = fill_blank_count
+            if yes_no_count > 0:
+                question_distribution["Yes/No"] = yes_no_count
                 
-                generator = MathQuestionGenerator(api_key=api_key, model=model)
-                
-                question_distribution = {}
-                if mcq_count > 0:
-                    question_distribution["MCQ"] = mcq_count
-                if fill_blank_count > 0:
-                    question_distribution["Fill-in-the-Blank"] = fill_blank_count
-                if yes_no_count > 0:
-                    question_distribution["Yes/No"] = yes_no_count
-                
-                # Call backend with lesson generation flag
-                questions = generator.generate_questions_batch(
-                    subject=subject,
-                    subtopic=subtopic,
-                    question_distribution=question_distribution,
-                    level=level,
-                    use_examples=use_examples,
-                    generate_lesson=True  # Always generate lesson
-                )
-                
+            # Create a status container
+            with st.status("🚀 Starting Content Agent...", expanded=True) as status:
+                # Run the async loop
+                questions = asyncio.run(run_generation_stream(
+                    generator, 
+                    subject, 
+                    subtopic, 
+                    question_distribution, 
+                    level, 
+                    status
+                ))
+            
+            if questions:
                 st.session_state.generated_questions = questions
-                st.success(f"Successfully generated {len(questions)} questions with lesson")
+                st.success(f"Successfully generated questions with lesson!")
                 
-                # Show the real API call count
-                st.info(f"Total API calls made: {generator.llm_service.get_api_call_count()}")
+                # Show API usage if available
+                if hasattr(generator.llm_service, 'get_api_call_count'):
+                    st.info(f"Total API calls made: {generator.llm_service.get_api_call_count()}")
+            else:
+                st.error("Generation completed but no content was returned. Please try again.")
 
         except Exception as e:
             st.error(f"Error generating questions: {str(e)}")
-            st.info("If you hit rate limits, wait 60 seconds and try again, or reduce the number of questions")
+            st.info("If you hit rate limits, wait 60 seconds and try again.")
+            # Print trace for debugging
+            import traceback
+            st.code(traceback.format_exc())
 
 # --- Results Display ---
 if st.session_state.generated_questions:
@@ -369,6 +435,19 @@ if st.session_state.generated_questions:
             for idx, (tab, screen) in enumerate(zip(screen_tabs, screens)):
                 with tab:
                     # Display screen content
+                    
+                    # 1. Catchy Heading (Yellow highlight style)
+                    if screen.get('heading'):
+                        st.markdown(f"""
+                        <div style="background-color: #fff3cd; padding: 5px 10px; border-radius: 5px; display: inline-block; margin-bottom: 10px;">
+                            <h3 style="margin: 0; color: #856404;">{escape_markdown(screen.get('heading'))}</h3>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                    # 2. Conversational Subheading (Italic/Bold connector)
+                    if screen.get('subheading'):
+                        st.markdown(f"**_{escape_markdown(screen.get('subheading'))}_**")
+                        
                     st.markdown(escape_markdown(screen.get('content', '')))
                     
                     # Show key term if present

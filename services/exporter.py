@@ -26,6 +26,8 @@ class ContentPackageExporter:
                 "screens": [
                     {
                         "screen_number": screen.screen_number,
+                        "heading": screen.heading,
+                        "subheading": screen.subheading,
                         "content": screen.content,
                         "key_term": screen.key_term
                     } for screen in content.lesson.screens

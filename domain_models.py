@@ -2,7 +2,8 @@
 Domain models for the Educational Content Orchestrator.
 These models replace the legacy TypedDict state with strict Pydantic V2 validation.
 """
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, TypedDict, Annotated
+import operator
 from enum import Enum
 from datetime import datetime
 from pydantic import BaseModel, Field, model_validator, ConfigDict
@@ -37,6 +38,8 @@ class DefinitionItem(BaseModel):
 class LessonScreen(BaseModel):
     """A single screen in a mobile-friendly lesson."""
     screen_number: int = Field(..., description="Screen order (1-indexed)")
+    heading: str = Field(..., description="Catchy, short heading (e.g. 'But wait!')")
+    subheading: str = Field(..., description="Conversational subheading (e.g. 'Imagine this...')")
     content: str = Field(..., description="1-3 sentences for this screen")
     key_term: Optional[str] = Field(None, description="Key term introduced in this screen")
 
@@ -197,3 +200,34 @@ class EducationalContent(BaseModel):
             "coverage_percentage": (covered_concepts / total_concepts) * 100,
             "missing_concepts": [c for c in key_concepts if c not in self.concept_coverage]
         }
+
+
+class GraphState(TypedDict):
+    """
+    State definition for the LangGraph workflow.
+    Managed by the StateGraph.
+    """
+    # --- Inputs ---
+    subject: str
+    subtopic: str
+    level: int
+    question_distribution: Dict[str, int]
+    
+    # --- Intermediate Types ---
+    lesson: Optional[LessonContent]
+    lesson_context: Optional[LessonContext]
+    
+    # --- Planning Data ---
+    question_plan: List[QuestionRequirements]
+    current_question_index: int
+    
+    # --- Active Question Processing ---
+    current_question: Optional[GeneratedQuestion]
+    validation_status: bool
+    validation_errors: List[str]
+    revision_count: int
+    
+    # --- Results ---
+    # Annotated with operator.add to allow simple appending of new questions
+    generated_questions: Annotated[List[GeneratedQuestion], operator.add]
+    final_package: Optional[EducationalContent]

@@ -36,9 +36,11 @@ class LessonGenerationService:
         
         SCREEN-BASED FORMAT:
         1. Generate 4-6 screens total.
-        2. Each screen: 1-3 simple sentences MAX.
+        2. Each screen MUST have:
+           - **Catchy Heading**: Short, punchy title (e.g., "Who's Who in Math?", "Time to wrap it up").
+           - **Conversational Subheading**: A friendly connector (e.g., "Imagine this situation", "But wait!", "One more thing!").
+           - **Content**: 1-3 simple sentences MAX.
         3. Use 5th grade language (short words, simple sentences).
-        4. Do NOT use emojis.
         
         SCREEN PROGRESSION:
         - Screens 1-2: Start with a real-world example. Set the scene step-by-step.
