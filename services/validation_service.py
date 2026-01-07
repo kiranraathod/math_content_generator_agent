@@ -61,11 +61,20 @@ class ValidationService:
         Solution: {question.solution}
         
         Check for:
-        1. Does the question actually test "{target_concept}"?
+        1. Does the question test "{target_concept}"?
+           (Note: "Testing" includes APPLYING the concept in a problem, identifying it, or defining it. All are valid.)
         2. Does it use the terminology defined in the lesson?
         3. Is the solution consistent with the lesson's definitions?
         
-        Output VALID if all checks pass. Otherwise output INVALID: [reason].
+        Output VALID if:
+        - The question involves the concept in ANY way (calculation, identification, application).
+        - It is mathematically correct.
+        
+        Output INVALID only if:
+        - The concept is completely irrelevant to the question.
+        - The question contradicts the lesson definitions.
+        
+        Format: VALID or INVALID: [reason]
         """
         
         messages = [
