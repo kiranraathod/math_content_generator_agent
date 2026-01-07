@@ -125,6 +125,8 @@ if 'examples_available' not in st.session_state:
     st.session_state.examples_available = False
 if 'api_key' not in st.session_state:
     st.session_state.api_key = load_api_key_from_env()
+if 'show_latex_preview' not in st.session_state:
+    st.session_state.show_latex_preview = False
 
 # Initialize the examples retriever
 try:
@@ -608,7 +610,7 @@ if st.session_state.generated_questions:
     
     st.markdown("---")
     
-    col1_btn, col2_btn, col3_btn = st.columns([1, 1, 1])
+    col1_btn, col2_btn, col3_btn, col4_btn = st.columns([1, 1, 1, 1])
     
     with col1_btn:
         json_output = json.dumps(st.session_state.generated_questions, indent=2)
@@ -619,19 +621,50 @@ if st.session_state.generated_questions:
             mime="application/json",
             use_container_width=True
         )
-    
+
     with col2_btn:
+        if st.button("✨ Convert to LaTeX", help="Convert math expressions to LaTeX", use_container_width=True):
+            if not api_key:
+                st.error("API Key required")
+            else:
+                try:
+                    with st.spinner("Converting to LaTeX..."):
+                        # Re-init generator if needed (lightweight)
+                        gen_service = MathQuestionGenerator(api_key=api_key, model=model)
+                        latex_content = gen_service.convert_to_latex(st.session_state.generated_questions)
+                        
+                    with st.spinner("Converting to LaTeX..."):
+                        # Re-init generator if needed (lightweight)
+                        gen_service = MathQuestionGenerator(api_key=api_key, model=model)
+                        latex_content = gen_service.convert_to_latex(st.session_state.generated_questions)
+                        
+                        # Update session state
+                        st.session_state.generated_questions = latex_content
+                        st.session_state.show_latex_preview = True
+                        st.success("Converted to LaTeX!")
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Conversion failed: {e}")
+    
+    with col3_btn:
         if st.button("🗑️ Clear All", use_container_width=True):
             st.session_state.generated_questions = []
             st.rerun()
     
-    with col3_btn:
+    with col4_btn:
         if st.button("☁️ Upload to Database", use_container_width=True, type="primary"):
             try:
                 supabase_service = SupabaseService()
                 
                 rows_to_upload = []
-                for question in questions:
+                # Handle potentially list or dict structure
+                content_data = st.session_state.generated_questions
+                q_list = content_data.get('questions', []) if isinstance(content_data, dict) else content_data
+                
+                # If content_data is dict, we might have lesson title
+                lesson_title = content_data.get('lesson', {}).get('title') if isinstance(content_data, dict) else None
+
+                for question in q_list:
                     row = {
                         "Subject": question.get('subject', 'Unknown'),
                         "Subtopic": question.get('subtopic', 'Unknown'),
@@ -642,7 +675,7 @@ if st.session_state.generated_questions:
                         # Add new fields if available
                         "tests_concept": question.get('tests_concept'),
                         "uses_lesson_terminology": question.get('uses_lesson_terminology'),
-                        "lesson_title": lesson.get('title') if lesson else None
+                        "lesson_title": lesson_title
                     }
                     rows_to_upload.append(row)
                 
@@ -659,6 +692,15 @@ if st.session_state.generated_questions:
     
     with st.expander("View Raw JSON"):
         st.json(st.session_state.generated_questions)
+        
+    if st.session_state.show_latex_preview:
+        st.info("✨ conversion complete. See preview below.")
+        with st.expander("📝 LaTeX Conversion Preview", expanded=True):
+            st.json(st.session_state.generated_questions)
+        
+        if st.button("Dismiss Preview"):
+            st.session_state.show_latex_preview = False
+            st.rerun()
 
 # --- Footer Information ---
 st.markdown("---")

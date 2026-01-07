@@ -13,6 +13,7 @@ from services.config import MathGeneratorConfig
 # New Architecture Imports
 from services.orchestrator import EducationalContentOrchestrator
 from services.exporter import ContentPackageExporter
+from services.latex_service import LatexConversionService
 from domain_models import QuestionType
 
 
@@ -46,6 +47,7 @@ class MathQuestionGenerator:
         # --- NEW ARCHITECTURE ---
         self.orchestrator = EducationalContentOrchestrator(self.llm_service)
         self.package_exporter = ContentPackageExporter()
+        self.latex_service = LatexConversionService(self.llm_service)
         
         # LangGraph Service (Phase 4 Integration)
         from services.graph_workflow import EducationalContentGraph
@@ -125,6 +127,12 @@ class MathQuestionGenerator:
         Helper to format the domain model for the frontend using the exporter.
         """
         return self.package_exporter.to_frontend_format(content_package)
+
+    def convert_to_latex(self, formatted_content: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Convert a formatted content package (frontend format) to LaTeX.
+        """
+        return self.latex_service.convert_content(formatted_content)
 
     def export_to_json(self, data: Any, filename: str = "questions.json") -> str:
         """
