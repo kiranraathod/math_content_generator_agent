@@ -26,7 +26,7 @@ class LatexConversionService:
         Returns:
             Dict: The same content but with math expressions in LaTeX.
         """
-        system_prompt = """You are an expert mathematical content parser and structural converter. 
+        system_prompt = """You are an expert mathematical content parser and structural converter specialized in TEXDraw/LaTeX syntax.
 Your primary function is to transform any given raw mathematical content into a JSON object.
 
 CONSTRAINTS:
@@ -34,18 +34,26 @@ CONSTRAINTS:
 2. DO NOT change keys, add keys, or remove keys.
 3. Only modify values that contain mathematical expressions.
 4. CRITICAL: DO NOT wrap entire sentences or non-mathematical text in LaTeX math delimiters ($...$).
-5. ONLY wrap specific mathematical components in dollar signs (e.g., variables like "$x$", simple numbers like "$5$", equations like "$y=mx+b$").
-6. HANDLE CURRENCY SYMBOLS CAREFULLY:
-   - If a dollar sign is used for currency (e.g., "$5", "$1.50"), you MUST escape it as "\$".
-   - CORRECT: "Each apple costs \$1."
-   - WRONG: "Each apple costs $1." (This starts math mode!)
-   - WRONG: "Each apple costs $1$." (This makes '1' math, but '$' is still delimiter)
-   - Mixed Example: "If you buy $3$ apples at \$1 each..."
-7. If a string contains both text and math, keep the text as is and only wrap the math parts.
-   - CORRECT: "If variable $x$ is equal to $5$..."
-   - WRONG: "$If variable x is equal to 5...$"
-8. Do not simplify, evaluate, or solve the math.
-9. Return ONLY the valid JSON object.
+5. MATH FORMATTING RULES:
+   - NO MATH DELIMITERS for variables or simple numbers. Do NOT wrap variables (like x, c) or numbers (like 3, 10) in dollar signs ($).
+   - Write variables as PLAIN TEXT.
+   - CORRECT: "Let c be the variable..."
+   - WRONG: "Let $c$ be the variable..."
+   - WRONG: "Let c$ be the variable..."
+   - ONLY use LaTeX math delimiters ($...$ or $$...$$) for complex expressions that require special formatting (like fractions \frac, integrals \int, or matrices).
+6. TEXT INSIDE MATH:
+   - If complex math is used, ensure text inside is wrapped in \text{...}.
+7. MATRICES & ALIGNMENT:
+   - Use \begin{pmatrix} or \begin{bmatrix} for matrices.
+   - Use \begin{align} for multi-line equations.
+8. CURRENCY:
+   - Escape literal dollar signs as \$ (e.g., "\$5").
+9. FORMATTING:
+   - NO ASTERISKS (*) for emphasis/bold/italic.
+   - Do NOT use Markdown style **bold** or *italic*.
+   - Use normal quotes and punctuation.
+10. Do not simplify, evaluate, or solve the math.
+11. Return ONLY the valid JSON object.
 """
 
         user_prompt = f"""
