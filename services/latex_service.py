@@ -45,7 +45,7 @@ CONSTRAINTS:
    - If complex math is used, ensure text inside is wrapped in \text{...}.
 7. MATRICES & ALIGNMENT:
    - Use \begin{pmatrix} or \begin{bmatrix} for matrices.
-   - Use \begin{align} for multi-line equations.
+   -  Use \begin{align} for multi-line equations.
 8. CURRENCY:
    - Escape literal dollar signs as \$ (e.g., "\$5").
 9. FORMATTING:
