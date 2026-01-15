@@ -1,5 +1,7 @@
 langgraph 
 langchain-google-genai 
+google-generativeai 
+google-generativeai 
 langchain-core
 streamlit
 supabase

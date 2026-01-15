@@ -9,6 +9,7 @@ from subjects_config import get_subjects, get_subtopics
 from utils.api_key_manager import load_api_key_from_env, save_api_key_to_env, clear_api_key
 from Supabase.supabase_service import SupabaseService
 from get_subtopic_examples import SubtopicExamplesRetriever
+from services.image_service import ImageGeneratorService
 
 # Load environment variables from .env file
 load_dotenv() 
@@ -455,6 +456,37 @@ if st.session_state.generated_questions:
                     # Show key term if present
                     if screen.get('key_term'):
                         st.info(f"🔑 **Key Term**: {screen.get('key_term')}")
+
+                    st.markdown("---")
+                    
+                    # Image Generation Section
+                    img_key = f"img_{lesson.get('title')}_{idx}"
+                    
+                    # Check if image already generated in session state
+                    if img_key in st.session_state:
+                        st.image(st.session_state[img_key], caption="AI Generated Visual", width=500)
+                    else:
+                        if st.button("🎨 Generate Visual", key=f"btn_{img_key}", help="Generate a context-aware image for this screen"):
+                            if not api_key:
+                                st.error("API Key required")
+                            else:
+                                try:
+                                    with st.spinner("Creating visual... (this may take 5-10s)"):
+                                        img_service = ImageGeneratorService(api_key=api_key)
+                                        # Construct prompt from screen content
+                                        screen_text = f"{screen.get('heading', '')} - {screen.get('content', '')}"
+                                        prompt = f"Educational illustration for math lesson about {lesson.get('title')}. Scene: {screen_text[:300]}. Style: 3D render, cute, vibrant colors, clear composition."
+                                        
+                                        image = img_service.generate_image(prompt)
+                                        
+                                        if image:
+                                            st.session_state[img_key] = image
+                                            st.rerun()
+                                        else:
+                                            st.error("Could not generate image.")
+                                            
+                                except Exception as e:
+                                    st.error(f"Generation failed: {e}")
         
         st.markdown("---")
         
