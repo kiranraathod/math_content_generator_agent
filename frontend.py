@@ -475,7 +475,14 @@ if st.session_state.generated_questions:
                                         img_service = ImageGeneratorService(api_key=api_key)
                                         # Construct prompt from screen content
                                         screen_text = f"{screen.get('heading', '')} - {screen.get('content', '')}"
-                                        prompt = f"Educational illustration for math lesson about {lesson.get('title')}. Scene: {screen_text[:300]}. Style: 3D render, cute, vibrant colors, clear composition."
+                                        prompt = (
+                                            f"A flat 2D vector illustration for a math lesson about {lesson.get('title')}. "
+                                            f"Visual Subject: A literal or metaphorical depiction of this scenario: '{screen_text[:300]}'. "
+                                            f"Art Style: Flat geometric vector art, rounded edges, simple shapes, no black outlines. "
+                                            f"Color Palette: Strictly limited—use 1 or 2 vibrant accent colors (like light blue or electric blue) "
+                                            f"against a calm, neutral background (white/light gray). "
+                                            f"Composition: Clean, minimalist, cute but mature."
+                                        )
                                         
                                         image = img_service.generate_image(prompt)
                                         
