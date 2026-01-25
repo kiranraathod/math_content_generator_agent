@@ -473,18 +473,12 @@ if st.session_state.generated_questions:
                                 try:
                                     with st.spinner("Creating visual... (this may take 5-10s)"):
                                         img_service = ImageGeneratorService(api_key=api_key)
-                                        # Construct prompt from screen content
-                                        screen_text = f"{screen.get('heading', '')} - {screen.get('content', '')}"
-                                        prompt = (
-                                            f"A flat 2D vector illustration for a math lesson about {lesson.get('title')}. "
-                                            f"Visual Subject: A literal or metaphorical depiction of this scenario: '{screen_text[:300]}'. "
-                                            f"Art Style: Flat geometric vector art, rounded edges, simple shapes, no black outlines. "
-                                            f"Color Palette: Strictly limited—use 1 or 2 vibrant accent colors (like light blue or electric blue) "
-                                            f"against a calm, neutral background (white/light gray). "
-                                            f"Composition: Clean, minimalist, cute but mature."
+                                        # Call the specialized lesson visual generator with raw data
+                                        image = img_service.generate_lesson_visual(
+                                            lesson_title=lesson.get('title'),
+                                            heading=screen.get('heading', ''),
+                                            content=screen.get('content', '')
                                         )
-                                        
-                                        image = img_service.generate_image(prompt)
                                         
                                         if image:
                                             st.session_state[img_key] = image
