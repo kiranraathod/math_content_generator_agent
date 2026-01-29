@@ -52,8 +52,10 @@ CONSTRAINTS:
    - NO ASTERISKS (*) for emphasis/bold/italic.
    - Do NOT use Markdown style **bold** or *italic*.
    - Use normal quotes and punctuation.
-10. Do not simplify, evaluate, or solve the math.
-11. Return ONLY the valid JSON object.
+10. BLANKS:
+   - For "blanks_version", use plain underscore "_" for blanks. Do NOT use "\_".
+11. Do not simplify, evaluate, or solve the math.
+12. Return ONLY the valid JSON object.
 """
 
         user_prompt = f"""
