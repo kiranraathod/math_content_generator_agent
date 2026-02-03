@@ -24,7 +24,7 @@ class ImageGeneratorService:
             
         self.client = genai.Client(api_key=api_key)
         # Using the model that was verified to work with the key
-        self.model_name = "imagen-4.0-fast-generate-001" 
+        self.model_name = "imagen-4.0-ultra-generate-001" 
 
     def generate_image(self, prompt: str) -> Image.Image:
         """
