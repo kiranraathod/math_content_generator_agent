@@ -75,12 +75,13 @@ class ImageGeneratorService:
         screen_text = f"{heading} - {content}"
         
         prompt = (
-            f"A flat 2D vector illustration for a math lesson about {lesson_title}. "
+            f"A flat 2D vector illustration for a math lesson about {lesson_title}. use single item to genrate  "
             f"Visual Subject: A literal or metaphorical depiction of this scenario: '{screen_text[:300]}'. "
             f"Art Style: Flat geometric vector art, rounded edges, simple shapes, no black outlines. "
-            f"Color Palette: Strictly limited—use 1 or 2 vibrant accent colors (like light blue or electric blue) "
-            f"against a calm, neutral background (white/light gray). "
-            f"Composition: Clean, minimalist, cute but mature."
+            f"Color Palette: Strictly limited—use 1 or 2 vibrant accent colors  "
+            f"white background. "
+            f"Composition: Clean, minimalist, whimsical but mature."
+            f"dont add text and numbers in the image"
         )
         
         return self.generate_image(prompt)
