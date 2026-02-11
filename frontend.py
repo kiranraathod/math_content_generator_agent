@@ -128,6 +128,8 @@ if 'api_key' not in st.session_state:
     st.session_state.api_key = load_api_key_from_env()
 if 'show_latex_preview' not in st.session_state:
     st.session_state.show_latex_preview = False
+if 'lesson_character_image' not in st.session_state:
+    st.session_state.lesson_character_image = None
 
 # Initialize the examples retriever
 try:
@@ -371,6 +373,10 @@ if generate_btn:
             # Initialize generator
             generator = MathQuestionGenerator(api_key=api_key, model=model)
             
+            # Clear previous lesson context to prevent style contamination
+            st.session_state.lesson_character_image = None
+            st.session_state.lesson_image_chat = None
+                
             question_distribution = {}
             if mcq_count > 0:
                 question_distribution["MCQ"] = mcq_count
@@ -471,17 +477,28 @@ if st.session_state.generated_questions:
                                 st.error("API Key required")
                             else:
                                 try:
-                                    with st.spinner("Creating visual... (this may take 5-10s)"):
+                                    with st.spinner("Creating visual... (this may take 15-30s)"):
                                         img_service = ImageGeneratorService(api_key=api_key)
-                                        # Call the specialized lesson visual generator with raw data
+                                        
+                                        # Get the reference image for visual consistency
+                                        reference_img = st.session_state.get('lesson_character_image')
+                                        
+                                        # Generate using gemini-3-pro-image-preview with reference image
                                         image = img_service.generate_lesson_visual(
                                             lesson_title=lesson.get('title'),
                                             heading=screen.get('heading', ''),
-                                            content=screen.get('content', '')
+                                            content=screen.get('content', ''),
+                                            reference_image=reference_img
                                         )
                                         
                                         if image:
                                             st.session_state[img_key] = image
+                                            
+                                            # Save the first image as the reference for future screens
+                                            if not st.session_state.get('lesson_character_image'):
+                                                st.session_state.lesson_character_image = image
+                                                st.toast("🎨 Visual Identity Established! Future screens will maintain this style.")
+                                                
                                             st.rerun()
                                         else:
                                             st.error("Could not generate image.")
@@ -682,6 +699,8 @@ if st.session_state.generated_questions:
     with col3_btn:
         if st.button("🗑️ Clear All", use_container_width=True):
             st.session_state.generated_questions = []
+            st.session_state.lesson_character_image = None
+            st.session_state.lesson_image_chat = None
             st.rerun()
     
     with col4_btn:
