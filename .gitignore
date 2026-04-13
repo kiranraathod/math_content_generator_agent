@@ -42,10 +42,22 @@ ENV/
 # Output files
 *.json
 !example_output.json
+!langgraph.json
 
 # OS
 .DS_Store
 Thumbs.db
+*.tmp
+*.bak
 
 # Logs
 *.log
+
+# Data artifacts
+data/
+temp/
+scratch/
+phase1_output.json
+phase2_output.json
+*.pyc
+*.pyo

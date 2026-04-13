@@ -1,0 +1,8 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "math_content_generator": "./graph.py:create_graph"
+  },
+  "env": ".env",
+  "python_version": "3.12"
+}
