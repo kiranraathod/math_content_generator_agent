@@ -13,6 +13,23 @@ A sophisticated math question generator powered by LangGraph and Google Gemini t
 - Clean Streamlit interface with real-time generation
 - JSON export functionality
 - Automatic database upload
+- **New Pattern:** AI-powered contextual image generation for lesson screens
+- **Breakthrough:** Strict stylistic and character consistency across multiple lesson images (zero-shot)
+
+## Breakthrough: Zero-Shot Visual Consistency
+
+A major challenge in AI educational content is maintaining a cohesive visual identity across multiple generated screens (e.g., a tutorial mascot must look identical in scene 1 and scene 2). Traditional approaches require complex, expensive LoRA model fine-tuning.
+
+We've achieved **strict visual and stylistic consistency** using a novel zero-shot prompting technique via the `gemini-3-pro-image-preview` multi-modal API.
+
+### How It Works: The "Master Reference" Pattern
+
+1. **Identity Establishment**: For the first lesson screen, the `ImageGeneratorService` creates a "Master Reference Image" establishing a unique character, a flat geometric art style, and a cohesive color palette.
+2. **Context Passing**: For all subsequent screens in the lesson, the frontend passes this Master Reference Image *inline* back to the Gemini API alongside the new screen context.
+3. **Strict Constraints**: We utilize highly aggressive consistency prompting:
+   > *"You MUST generate a NEW illustration that: 1. Uses the EXACT SAME main character/subject from the reference... 2. Keeps the EXACT SAME art style... Think of this like drawing the next frame in an animation."*
+
+**The Technical Value**: End-users experience a premium, narrative-driven educational storyboard without the latency, overhead, and cost of personalized model training. Developers avoid managing complex model checkpoints.
 
 ## Architecture
 
@@ -30,17 +47,11 @@ Generate Question → Validate Question → Validate Answer → Output
 3. **Validate Answer**: Verifies correctness and format
 4. **Revise Question**: Improves quality based on validation feedback (max 3 iterations)
 
-**State Management:**
-- Subject and subtopic configuration
-- Question type and difficulty level
-- Generated content (question, solution, answer)
-- Validation status and error tracking
-- Revision count and prompt history
-
 ### Service Layer
 
 **Backend Services:**
 - `LLMService`: Google Gemini API integration with retry logic
+- `ImageGeneratorService`: Integrates `imagen-4.0-ultra-generate-001` and `gemini-3-pro-image-preview` to handle multi-modal image generation and consistency management
 - `QuestionService`: Question generation and parsing
 - `ValidationService`: Content validation
 - `WorkflowOrchestrator`: LangGraph state machine coordinator
@@ -53,6 +64,9 @@ Generate Question → Validate Question → Validate Answer → Output
 **Data Extractors:**
 - `IXLContentScraper`: Extracts LaTeX questions from IXL
 - `IXLToSupabaseManager`: Processes and stores IXL content
+
+### Image Generation Pipeline
+The newly integrated image pipeline is controlled by `ImageGeneratorService`. It accepts textual lesson context from the frontend and securely communicates with Google's GenAI SDK. Results are streamed back to the Streamlit UI as PIL images, which are dynamically cached in the app's `session_state` to anchor subsequent generation cycles, establishing the Master Reference pattern. 
 
 ### Database Schema
 
@@ -83,6 +97,7 @@ User interface features:
 - Real-time generation with progress tracking
 - Question display with expandable details
 - Batch operations: JSON export and database upload
+- **In-App Lesson Storyboards**: Visual preview and on-demand "Generate Visual" buttons tied directly to multi-modal generation.
 
 ## Installation
 
@@ -216,10 +231,13 @@ python main.py
    - Toggle "Use Database Examples" if available
    - AI uses existing questions as style reference
 
-6. **Generate and Export**
+6. **Generate Content**
    - Click "Generate Questions"
-   - View generated content with solutions
-   - Download as JSON or upload to database
+   - View generated lesson and questions. 
+   - **Visuals**: On the generated lesson screen, click " Generate Visual" to create custom lesson illustrations. Creating the first visual sets the Master Reference style.
+
+7. **Export & Upload**
+   - Download as JSON or upload to the database using the bottom panel tools.
 
 ### Difficulty Levels
 
@@ -355,28 +373,31 @@ Automatic retry logic with exponential backoff handles rate limits.
 
 ```
 math_content_generator_agent/
-├── app/                          # FastAPI (future)
-├── backend.py                    # Main generator class
-├── frontend.py                   # Streamlit interface
-├── main.py                       # Application launcher
-├── workflow.py                   # LangGraph orchestrator
-├── models.py                     # State definitions
-├── subjects_config.py            # Subject/subtopic configuration
-├── services/                     # Core services
-│   ├── llm_service.py           # Gemini API wrapper
-│   ├── question_service.py      # Question generation
-│   └── validation_service.py    # Content validation
-├── Supabase/                     # Database layer
-│   ├── supabase_service.py      # AiContent operations
-│   ├── subtopics_service.py     # Examples operations
-│   └── supabase_integration.py  # Combined generator
-├── DataExtractors/               # IXL content processing
-│   ├── ixl_content_scraper.py
-│   └── ixl_to_supabase_manager.py
-├── utils/                        # Utilities
-│   ├── export.py                # JSON export
-│   └── api_key_manager.py       # Key management
-└── tests/                        # Test suite
+├── .env                  # Configuration
+├── .gitignore            # Git exclusions
+├── pyproject.toml        # Dependencies
+├── main.py               # Main Application Launcher
+├── frontend.py           # Streamlit Interface
+├── backend.py            # Core Generator Logic
+├── domain_models.py      # Core Data Models
+├── subjects_config.py    # Math Config definitions
+├── get_subtopic_examples.py # Example Retriever
+├── doc/                  # Centralized Documentation
+├── scripts/              # Independent Scripts
+├── services/             # Core Services & Handlers
+│   ├── image_service.py       # Modal Image Generators
+│   ├── llm_service.py         # Gemini API Integration
+│   ├── concept_mapper.py      # Skill extractors
+│   ├── exporter.py            # Export utilities
+│   ├── graph_nodes.py         # App logic nodes
+│   ├── graph_workflow.py      # Execution trees
+│   ├── latex_service.py       # Equation formatting
+│   ├── lesson_generator.py    # Lesson narrative builder
+│   ├── orchestrator.py        # Controller component
+│   ├── question_generator.py  # Question construction
+│   └── validation_service.py  # Quality validation
+├── DataExtractors/       # Web Data Acquisition
+└── Supabase/             # Storage Layer
 ```
 
 ## Documentation
@@ -384,8 +405,8 @@ math_content_generator_agent/
 Detailed guides available:
 - `Supabase/SUPABASE_GUIDE.md` - Database integration
 - `DataExtractors/IXL_SUPABASE_README.md` - IXL scraping workflow
-- `QUICKSTART.md` - Quick start guide
-- `API_KEY_SETUP.md` - API configuration
+- `doc/API_KEY_SETUP.md` - API configuration
+- `doc/LANGGRAPH_STUDIO_GUIDE.md` - Integration guidelines
 
 ## Troubleshooting
 
